@@ -26,6 +26,8 @@
   marked as fasting or filled with the person's average day (Today on that day, or Trends), so trends stay honest.
   ✏️ My own food or supplement: type exactly what's in it (per serving or per 100 g, any nutrient), from Add by typing,
   Supplement, My recipes & foods, or "Use my own numbers" on any food in a meal. Editing one fixes every day it was had.
+  Press and hold the camera button (right-click on a computer): Quick add menu with Add again, water and every way to add.
+  Removing a food from a meal (its ✕) now saves at once, with Undo; tap any nutrient in "Every nutrient" to see where it came from.
   ⚡ Add again: one-tap chips on Today for the things you have most, and a list with Most often / Recent tabs.
   Platform change, marked "PLATFORM CHANGE (2026-10-13 V4)": dd.helper dictation (above).
   0.3.0 (V3 handoff, Oran 2026-10-13): the home screen as an instrument cluster. Menu → Home screen & health turns
@@ -785,6 +787,13 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 .ik-cam{justify-self:center;margin-top:-24px;width:64px;height:64px;border-radius:50%;background:var(--ik-ink);border:4px solid #fff;display:flex;align-items:center;justify-content:center;
   box-shadow:0 8px 20px rgba(0,0,0,.25);cursor:pointer}
 .ik-cam svg{width:30px;height:30px}
+/* V4: press and hold the camera for quick adds */
+.ik-cam,[data-act="photo"]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.ik-cam.ik-holding{transform:scale(.92);transition:transform .35s}
+.ik-qgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+.ik-qbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:#fff;border:0;border-radius:16px;padding:12px 6px;min-height:78px;font:inherit;font-size:13px;font-weight:600;color:var(--ik-ink);cursor:pointer;text-align:center}
+.ik-qbtn span{font-size:24px;line-height:1}
+.ik-qbtn:active{background:var(--ik-grey)}
 /* top nav (computers) */
 .ik-topnav{display:none;align-items:center;gap:10px;margin:0 0 6px;flex-wrap:wrap}
 .ik-topnav .ik-seg{grid-template-columns:repeat(3,minmax(0,1fr));min-width:330px}
@@ -900,7 +909,7 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="8"/></svg>Today</button>
     <button class="ik-tab" data-go="trends">
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 20V10M10 20V4M15 20v-7M20 20v-11"/></svg>Trends</button>
-    <button class="ik-cam" data-act="photo" aria-label="Snap my food">
+    <button class="ik-cam" data-act="photo" aria-label="Snap my food (press and hold for more ways to add)">
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
     <button class="ik-tab" data-go="advice">
       <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.5 6 6.5.5-5 4 1.5 6.5L12 16.5 6.5 20 8 13.5l-5-4 6.5-.5z"/></svg>Advice</button>
@@ -8163,11 +8172,11 @@ function ikRenderToday(ctx) {
     '<button class="ik-btn ghost" data-act="forgot">🕐 Forgot a meal?</button><button class="ik-btn ghost" data-act="supp">💊 Supplement</button></div>';
   h += "</div></div>";
   // every nutrient, folded away
-  h += '<details class="ik-card ik-more" id="ikAllN"' + (IK_UI.openAll ? " open" : "") + '><summary>Every nutrient ' + (isToday ? "today" : "this day") + "</summary>" + ikNutrientList(d, t, 1) + "</details>";
+  h += '<details class="ik-card ik-more" id="ikAllN"' + (IK_UI.openAll ? " open" : "") + '><summary>Every nutrient ' + (isToday ? "today" : "this day") + "</summary>" + ikNutrientList(d, t, 1, day) + "</details>";
   ctx.ui.$("ikToday").innerHTML = h;
 }
 /* All nutrients against targets. days = how many days the totals cover (averages for spans). */
-function ikNutrientList(d, t, days) {
+function ikNutrientList(d, t, days, srcDay) {
   days = days || 1; var out = '<div class="ik-nlist">', lastG = "";
   IK_N.forEach(function (n) {
     if (n.k === "kcal" && ikHideKcal(d)) return;
@@ -8181,7 +8190,7 @@ function ikNutrientList(d, t, days) {
     if (n.k === "alcohol" && v > 0) note += '<div class="ik-small">' + ikNum(v / IK_EDITION.standardDrinkG, 1) + " standard drinks" + (days > 1 ? " a day on average" : "") + ".</div>";
     var color = n.g === "Vitamins" ? "var(--ik-vit)" : n.g === "Minerals" ? "var(--ik-min)" : n.k === "protein" ? "var(--ik-protein)" : n.k === "fibre" ? "var(--ik-fibre)" : n.k === "kcal" ? "var(--ik-energy)" : "var(--ik-fat)";
     if (cls === "ik-hi") color = "var(--ik-high)";
-    out += '<div class="ik-nrow"><div class="ik-row"><span>' + ikEsc(n.label) + "</span><span>" + val + "</span></div>" +
+    out += '<div class="ik-nrow"' + (srcDay && t.v[n.k] > 0 ? ' data-src="' + n.k + '" role="button" tabindex="0" style="cursor:pointer" title="See where it came from"' : "") + '><div class="ik-row"><span>' + ikEsc(n.label) + (srcDay && t.v[n.k] > 0 ? ' <span class="ik-small">›</span>' : "") + "</span><span>" + val + "</span></div>" +
       (tg && !allMissing ? '<div class="ik-bar"><i style="width:' + Math.min(100, Math.max(0, pct || 0)).toFixed(0) + "%;background:" + color + '"></i></div>' : "") + note + "</div>";
   });
   return out + '</div><p class="ik-small" style="margin-top:12px">"Not measured" means the food table has no value for that food, so it isn\'t counted as zero. Added sugars aren\'t listed separately in the Canadian Nutrient File.</p>';
@@ -9039,6 +9048,69 @@ function ikOpenAgain() {
   paint();
 }
 
+/* V4: the quick add menu (press and hold the camera). */
+function ikOpenQuickMenu() {
+  var d = dd.getData(), usual = ikUsual(d, "common").slice(0, 4), day = IK_UI.day || ikToday();
+  if (usual.length < 4) ikUsual(d, "recent").forEach(function (u) { if (usual.length < 4 && !usual.some(function (x) { return x.sig === u.sig; })) usual.push(u); });
+  var acts = [["photo", "📷", "Snap my food"], ["drink", "🥤", "Snap a drink"], ["label", "🏷️", "Snap a label"],
+              ["water", "💧", "Glass of water"], ["again", "⚡", "Add again…"], ["add", "＋", "Add by typing"],
+              ["supp", "💊", "Supplement"], ["mine", "✏️", "My own food"], ["forgot", "🕐", "Forgot a meal?"]];
+  var sh = dd.ui.sheet('<div class="ik-sheettop"><h2>Quick add</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+    (usual.length ? '<div class="ik-sechead" style="margin-top:0">Add again · ' + ikEsc(day === ikToday() ? "now" : ikDayName(day)) + '</div><div class="ik-hits" style="margin:0 0 14px">' + usual.map(function (u) {
+      return '<button class="ik-hit" data-sig="' + ikEsc(u.sig) + '"><span class="ik-grow"><b>' + ikEsc(u.name) + "</b><br><small>" + ikEsc(ikUsualAmount(u, d)) + '</small></span><span class="ik-round" aria-hidden="true">＋</span></button>'; }).join("") + "</div>" : "") +
+    '<div class="ik-qgrid">' + acts.map(function (a) { return '<button class="ik-qbtn" data-q="' + a[0] + '"><span aria-hidden="true">' + a[1] + "</span>" + ikEsc(a[2]) + "</button>"; }).join("") + "</div>");
+  sh.classList.add("ik-sheet");
+  sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
+  sh.querySelectorAll("[data-sig]").forEach(function (b) { b.addEventListener("click", function () { dd.ui.closeSheet(); ikAddAgain(b.getAttribute("data-sig")); }); });
+  sh.querySelectorAll("[data-q]").forEach(function (b) { b.addEventListener("click", function () {
+    var a = b.getAttribute("data-q"); dd.ui.closeSheet();
+    if (a === "photo") ikPickPhoto(); else if (a === "drink") ikPickPhoto({ drink: true }); else if (a === "label") ikPickPhoto({ label: true });
+    else if (a === "water") ikAddWater(250); else if (a === "again") ikOpenAgain(); else if (a === "add") ikOpenAdd();
+    else if (a === "supp") ikOpenSupps(); else if (a === "mine") ikOpenFoodEditor({ addNow: true }); else if (a === "forgot") ikForgotMeal();
+  }); });
+}
+
+/* V4: where one nutrient came from on a day, biggest first. Each row opens that meal to change or remove it. */
+function ikOpenSources(k, day) {
+  var d = dd.getData(), nt = IK_NBY[k]; if (!nt) return;
+  var rows = [];
+  ikEntriesOn(d, day).forEach(function (e) {
+    (e.items || []).forEach(function (it) {
+      var v = ikItemNutrients(it, d).v[k] || 0, r = ikResolve(it.ref, d);
+      if (v > 0) rows.push({ e: e, name: it.name || (r ? r.label : "Food"), v: v, amt: it.n != null ? it.n + " serv." : Math.round(it.g || 0) + " g" });
+    });
+  });
+  rows.sort(function (a, b) { return b.v - a.v; });
+  var total = rows.reduce(function (a, x) { return a + x.v; }, 0);
+  var sh = dd.ui.sheet('<div class="ik-sheettop"><h2>' + ikEsc(nt.label) + " · " + ikEsc(ikDayName(day)) + '</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+    '<p class="ik-small" style="margin-top:0">' + ikNum(total, nt.dp) + " " + nt.unit + " in all. Tap one to change its amount or remove it.</p>" +
+    '<div class="ik-hits">' + rows.map(function (x, i) {
+      return '<button class="ik-hit" data-i="' + i + '"><span class="ik-grow"><b>' + ikEsc(x.name) + "</b><br><small>" + ikEsc(x.amt) + " · " + ikEsc(IK_PARTS[x.e.part] || "") + " " + ikEsc(ikNiceTime(x.e.time)) + "</small></span>" +
+        "<b>" + ikNum(x.v, nt.dp) + " " + nt.unit + "</b></button>";
+    }).join("") + "</div>");
+  sh.classList.add("ik-sheet");
+  sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
+  sh.querySelectorAll("[data-i]").forEach(function (b) { b.addEventListener("click", function () { ikOpenEntry(rows[+b.getAttribute("data-i")].e.id); }); });
+}
+
+/* V4 (Oran's iPhone, 2026-10-13): a food's line shows what it actually adds. Psyllium showed only
+   "0 kcal · protein 0 g" while its 17 g of fibre was counted. Main nutrients it has come first; a food with
+   only vitamins or minerals (a supplement) shows the ones that cover most of the person's target. */
+function ikItemLine(x, hide) {
+  var d = dd.getData(), parts = [];
+  if (!hide && x.v.kcal > 0.5) parts.push(ikNum(x.v.kcal, 0) + " kcal");
+  ["protein", "fibre", "carb", "fat", "sugar"].forEach(function (k) {
+    var v = x.v[k]; if (v > 0.05 && parts.length < 4) parts.push(ikLc(IK_NBY[k].label) + " " + ikNum(v, 1) + " g");
+  });
+  if (parts.length < 2) {
+    IK_N.filter(function (n) { return x.v[n.k] > 0 && (n.g === "Vitamins" || n.g === "Minerals" || n.k === "caffeine"); })
+      .map(function (n) { var tg = ikTarget(d, n.k); return { n: n, pct: tg ? x.v[n.k] / tg : 0 }; })
+      .sort(function (a, b) { return b.pct - a.pct; }).slice(0, 3 - parts.length)
+      .forEach(function (o) { parts.push(o.n.label + " " + ikNum(x.v[o.n.k], o.n.dp) + " " + o.n.unit); });
+  }
+  return parts.length ? parts.join(" · ") : (hide ? "nothing counted yet" : "0 kcal");
+}
+
 /* ---------- V4: my own food or supplement, with my own numbers (Oran, 2026-10-13) ----------
    For anything the table doesn't have or gets wrong (psyllium fibre, a protein powder, a vitamin).
    Numbers are per serving (one scoop, one capsule) or per 100 g. An empty box means "not in it".
@@ -9176,7 +9248,16 @@ function ikTouch(dt, items) {
 function ikOpenEntry(id) {
   var d = dd.getData(), e = (d.entries || []).filter(function (x) { return x.id === id; })[0]; if (!e) return;
   var work = JSON.parse(JSON.stringify(e)), hide = ikHideKcal(d);
-  var sh = dd.ui.sheet("", { sticky: true }); sh.classList.add("ik-sheet");
+  /* V4 (Oran's iPhone, 2026-10-13): removing a food with its ✕ only took it off this screen; closing with the
+     top ✕ threw the removal away, so its fibre stayed in the day. Now removals and added foods save at once,
+     and closing the sheet any way keeps any other change (time, part of day, note). */
+  function storeWork() {
+    var cur = (dd.getData().entries || []).filter(function (x) { return x.id === id; })[0];
+    if (!cur || !work.items.length || JSON.stringify(cur) === JSON.stringify(work)) return false;
+    dd.update(function (dt) { dt.entries = dt.entries.map(function (x) { return x.id === id ? JSON.parse(JSON.stringify(work)) : x; }); });
+    return true;
+  }
+  var sh = dd.ui.sheet("", { sticky: true, onClose: storeWork }); sh.classList.add("ik-sheet");
   function paint() {
     var t = ikTotals([work], d);
     sh.innerHTML = '<div class="ik-sheettop"><h2>' + ikEsc(ikEntryName(work, d)) + '</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
@@ -9188,7 +9269,7 @@ function ikOpenEntry(id) {
           /* Oran, 2026-10-13: a clear ✓ next to the amount. It lights up while you type and saves straight away. */
           '<button class="ik-ok" data-ok="' + i + '" aria-label="Save this amount" title="Save this amount">✓</button>' +
           '<button class="ik-x" data-del="' + i + '" aria-label="Remove">✕</button></div><div class="ik-small">' + (r ? ikEsc(r.label) : "This food was deleted") +
-          (hide ? "" : " · " + ikNum(x.v.kcal, 0) + " kcal") + " · protein " + ikNum(x.v.protein, 1) + " g" + (r && r.food ? " · " + ikEsc(ikAbout(r.food, it.g)) : "") +
+          " · " + ikItemLine(x, hide) + (r && r.food ? " · " + ikEsc(ikAbout(r.food, it.g)) : "") +
           (r && !it.oil && r.type !== "recipe" ? '<br><button class="ik-link" data-own="' + i + '" style="padding:4px 0;min-height:0">' + (r.type === "custom" ? "✏️ Edit what's in it" : "✏️ Use my own numbers") + "</button>" : "") + "</div></div>";
       }).join("") +
       '<button class="ik-link" data-addone>＋ Add a food to this</button>' +
@@ -9230,7 +9311,21 @@ function ikOpenEntry(id) {
       saveNow(ikSavedNote(it, d));
     }); });
     q("[data-askbot]").addEventListener("click", function () { dd.ui.closeSheet(); ikAskAboutEntry(id); });
-    sh.querySelectorAll("[data-del]").forEach(function (b) { b.addEventListener("click", function () { work.items.splice(+b.getAttribute("data-del"), 1); paint(); }); });
+    sh.querySelectorAll("[data-del]").forEach(function (b) { b.addEventListener("click", function () {
+      var i = +b.getAttribute("data-del"), gone = work.items[i]; if (!gone) return;
+      var before = JSON.parse(JSON.stringify((dd.getData().entries || []).filter(function (x) { return x.id === id; })[0] || work));
+      var undo = function (msg) { dd.ui.notice("item-undo", msg, "info", [
+        { label: "↩ Undo", onClick: function () { dd.update(function (dt) { dt.entries = dt.entries.filter(function (x) { return x.id !== id; }).concat([before]); }); dd.ui.clearNotice("item-undo"); dd.ui.toast("Put back."); } },
+        { label: "OK", primary: true, onClick: function () { dd.ui.clearNotice("item-undo"); } }]); };
+      var nm = gone.name || ((ikResolve(gone.ref, d) || {}).label) || "That food";
+      work.items.splice(i, 1);
+      if (!work.items.length) {   // the last food: the whole entry goes
+        dd.update(function (dt) { dt.entries = dt.entries.filter(function (x) { return x.id !== id; }); });
+        dd.ui.closeSheet(); undo("Removed " + nm + ".");
+        return;
+      }
+      saveNow(); undo("Removed " + nm + " from " + ikEntryName(work, d) + ".");
+    }); });
     sh.querySelectorAll("[data-own]").forEach(function (b) { b.addEventListener("click", function () {   // V4: change what a food or supplement adds
       var i = +b.getAttribute("data-own"), it = work.items[i], r = ikResolve(it.ref, d); if (!r) return;
       if (work.items.length) dd.update(function (dt) { dt.entries = dt.entries.map(function (x) { return x.id === id ? JSON.parse(JSON.stringify(work)) : x; }); });
@@ -9242,7 +9337,7 @@ function ikOpenEntry(id) {
     q("[data-t]").addEventListener("change", function () { work.time = q("[data-t]").value || work.time; work.part = ikPartOf(work.time); paint(); });
     q("[data-p]").addEventListener("change", function () { work.part = q("[data-p]").value; });
     q("[data-note]").addEventListener("input", function () { work.note = q("[data-note]").value.slice(0, 120); });
-    q("[data-addone]").addEventListener("click", function () { ikPickFood("Add a food", "", function (h) { var r = ikResolve(h.ref, d); work.items.push(r && r.perServing && !r.per100 ? { ref: h.ref, n: 1, name: h.label } : { ref: h.ref, g: r && r.food && r.food.m[0] ? Math.round(r.food.m[0][1]) : 100, name: h.label }); paint(); }); });
+    q("[data-addone]").addEventListener("click", function () { ikPickFood("Add a food", "", function (h) { var r = ikResolve(h.ref, d); work.items.push(r && r.perServing && !r.per100 ? { ref: h.ref, n: 1, name: h.label } : { ref: h.ref, g: r && r.food && r.food.m[0] ? Math.round(r.food.m[0][1]) : 100, name: h.label }); saveNow("Added " + h.label + "."); }); });
     q("[data-save]").addEventListener("click", function () {
       dd.update(function (dt) {
         if (!work.items.length) dt.entries = dt.entries.filter(function (x) { return x.id !== id; });
@@ -9821,6 +9916,7 @@ DD_PROGRAM.tools = [
 function ikMount(ctx) {
   var app = ctx.ui.$("ikApp");
   app.addEventListener("click", function (e) {
+    var src = e.target.closest("[data-src]"); if (src && app.contains(src)) { ikOpenSources(src.getAttribute("data-src"), IK_UI.day || ikToday()); return; }
     var b = e.target.closest("button"); if (!b || !app.contains(b)) return;
     var go = b.getAttribute("data-go"); if (go) { if (dd.helper && dd.helper.isOpen && dd.helper.isOpen()) dd.helper.close(); ikGo(go); return; }
     var act = b.getAttribute("data-act");
@@ -9860,6 +9956,24 @@ function ikMount(ctx) {
     if (ask === "tip") { var k = b.getAttribute("data-k"), nt = IK_NBY[k]; dd.helper.ask("Tell me about my " + (nt ? nt.label.toLowerCase() : "numbers") + " lately: why it matters and easy foods to fix it."); }
     else if (ask === "checkin") dd.helper.ask("Explain my weekly check-in in plain words, and give me two easy ideas for this week.");
   });
+  /* V4 (Oran, 2026-10-13): press and hold the camera (or right-click it on a computer) for quick add options. */
+  var holdT = null, holdXY = null, held = false;
+  app.addEventListener("pointerdown", function (e) {
+    var cam = e.target.closest('[data-act="photo"]'); if (!cam || !app.contains(cam)) return;
+    held = false; holdXY = [e.clientX, e.clientY]; clearTimeout(holdT);
+    cam.classList.add("ik-holding");
+    holdT = setTimeout(function () { holdT = null; held = true; cam.classList.remove("ik-holding"); try { if (navigator.vibrate) navigator.vibrate(12); } catch (x) {} ikOpenQuickMenu(); }, 450);
+  });
+  var holdStop = function () { clearTimeout(holdT); holdT = null; app.querySelectorAll(".ik-holding").forEach(function (x) { x.classList.remove("ik-holding"); }); };
+  app.addEventListener("pointermove", function (e) { if (holdT && holdXY && Math.abs(e.clientX - holdXY[0]) + Math.abs(e.clientY - holdXY[1]) > 12) holdStop(); });
+  ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) { app.addEventListener(ev, holdStop); });
+  app.addEventListener("contextmenu", function (e) {
+    var cam = e.target.closest('[data-act="photo"]'); if (!cam || !app.contains(cam)) return;
+    e.preventDefault(); if (!held) { held = true; holdStop(); ikOpenQuickMenu(); }
+  });
+  app.addEventListener("click", function (e) {   // the click that ends a long press doesn't also open the camera
+    if (held && e.target.closest('[data-act="photo"]')) { e.stopImmediatePropagation(); e.preventDefault(); held = false; }
+  }, true);
   app.addEventListener("toggle", function (e) { if (e.target && e.target.id === "ikAllN") IK_UI.openAll = e.target.open; }, true);
   app.addEventListener("mousemove", ikTooltip);
   app.addEventListener("mouseleave", function () { var tt = document.getElementById("ikTT"); if (tt) tt.remove(); });
