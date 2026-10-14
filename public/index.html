@@ -5596,9 +5596,17 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         }), sync.limits.connect, "first read").catch(function (e) { throw e.stage ? e : { stage: "reading", e: e }; });
       })
       .then(function () {
-        // Prove we can write too (rules), and record which version wrote here.
-        return withTimeout(fb.D.update(ledgerRef, { "meta/v": 1, "meta/schema": program.schemaVersion }), sync.limits.connect, "first write")
-          .catch(function (e) { throw { stage: "writing", e: e }; });
+        /* PLATFORM CHANGE (2026-10-13 V4, Oran's iPhone: "Not syncing" about 30 s after every reload).
+           The first read already proves the connection, so the test save that records which version wrote here
+           no longer blocks start-up or times out: a slow confirmation is fine, and only a real "no" from the
+           database (the rules) marks a problem. */
+        var myRef = ledgerRef;
+        fb.D.update(myRef, { "meta/v": 1, "meta/schema": program.schemaVersion }).then(function () { diag.firstWrite = "ok " + now(); }, function (e) {
+          diag.firstWrite = "failed " + now();
+          if (myRef !== ledgerRef) return;
+          var t = fail("writing", e);
+          if (t === "sync_rules" || t === "sync_auth" || t === "sync_config") { stopListening(); setProblem(t); }
+        });
       })
       .then(function () {
         try {
@@ -5610,7 +5618,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
           }));
           unsubs.push(fb.D.onValue(fb.D.ref(db, ".info/serverTimeOffset"), function (s) { timeOffset = Number(s.val()) || 0; }));
         } catch (e) {}
-        state = "on"; problem = null; rememberOn(true); diag.joined = now(); dd.ui.clearNotice("sync");
+        state = "on"; problem = null; retryN = 0; clearTimeout(retryT); rememberOn(true); diag.joined = now(); dd.ui.clearNotice("sync");
         connectedNow = true;   // the first read came from the database itself
         pushNow();
         paint(); dd.emit("sync:changed", { on: true });
@@ -5631,7 +5639,22 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var f = dd.errors.friendly(type, { company: "Firebase" });
     return { ok: false, type: type, title: f.title, help: f.help };
   }
-  function setProblem(type) { state = "problem"; problem = type; paint(); dd.emit("sync:changed", { on: wasOn(), problem: type }); }
+  /* PLATFORM CHANGE (2026-10-13 V4): a short hiccup (no answer, dropped connection) is retried by itself after
+     5, 15, 30, then every 60 seconds, and only shows as "Not syncing" once it has failed 3 times in a row.
+     Problems the buyer has to fix (rules, sign-in, setup code, a newer version) show straight away. */
+  var retryN = 0, retryT = null;
+  function soft(type) { return type === "sync_offline" || type === "unexpected" || type === "timeout"; }
+  sync.isSoft = function () { return state === "problem" && soft(problem) && retryN <= 3; };
+  function setProblem(type) {
+    state = "problem"; problem = type;
+    diag.problems = (diag.problems || []).concat(now() + " " + type).slice(-5);
+    clearTimeout(retryT);
+    if (soft(type) && wasOn() && sync.config()) {
+      retryN++;
+      retryT = setTimeout(function () { if (state === "problem" && (!document.visibilityState || document.visibilityState === "visible")) sync.start(); }, [5000, 15000, 30000][retryN - 1] || 60000);
+    }
+    paint(); dd.emit("sync:changed", { on: wasOn(), problem: type });
+  }
 
   function stopListening() {
     unsubs.forEach(function (u) { try { u(); } catch (e) {} });
@@ -5852,6 +5875,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     if (state === "on" && connectedNow) return { kind: "ok", short: "Synced", long: "Live sync is on. Changes go to your other devices straight away." };
     if (state === "on") return { kind: "wait", short: "Offline", long: "Can't reach your database right now. Your changes are kept here and go across when you're back online." };
     if (state === "newer") { var n = dd.errors.friendly("sync_newer"); return { kind: "bad", short: "Update needed", long: n.title + " " + n.help }; }
+    if (state === "problem" && sync.isSoft()) return { kind: "wait", short: "Reconnecting…", long: "Lost touch with your database for a moment. Trying again by itself; your changes are kept here meanwhile." };
     if (state === "problem") { var f = dd.errors.friendly(problem, { company: "Firebase" }); return { kind: "bad", short: "Not syncing", long: f.title + " " + f.help }; }
     return { kind: "off", short: "Sync off", long: "Live sync is off, so changes made here stay on this device. Tap to set it up." };
   };
@@ -5862,6 +5886,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var sh = dd.ui.sheet(dd.menu.headHtml({ title: "Live sync", icon: "🔄" }) +
       '<p class="dd-status show ' + (s.kind === "ok" ? "ok" : s.kind === "bad" ? "err" : "info") + '">' + dd.ui.esc(s.long) + '</p>' +
       (cfg ? '<p class="dd-note">Your database: <b>' + dd.ui.esc(cfg.projectId) + '</b></p>' : "") +
+      (state === "problem" && diag.lastError !== "-" ? '<p class="dd-note">What went wrong (for support): ' + dd.ui.esc(diag.lastError) + '</p>' : "") +
       (on ? '<p class="dd-note">☁️ <b>Backed up to the cloud.</b> Your ' + dd.ui.esc(program.dataLabel || "numbers") + ' are kept in your own Firebase database too, so clearing the browser or losing a device doesn\'t lose them. It\'s a live copy: a deletion is deleted there too, so keep a backup file now and then for a dated copy.</p>' : "") +
       '<div class="dd-btnrow">' +
         (on && dd.pair && !dd.env.isPhone ? '<button class="dd-btn" data-phone>📲 Add my phone</button>' : "") +
@@ -5924,7 +5949,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       "Pushes sent / confirmed: " + diag.pushes + " / " + diag.acked + " · last confirmed: " + diag.lastPush + (pushTimer ? " · a change is waiting to go" : "") +
         " · unconfirmed: " + Object.keys(pend).length,
       "Remote updates: " + diag.remote + " · applied: " + diag.applied + " · last: " + diag.lastRemote,
-      "Last sync problem: " + diag.lastError
+      "Last sync problem: " + diag.lastError + " · recent: " + ((diag.problems || []).join(", ") || "none") + " · test save: " + (diag.firstWrite || "-") + " · retries in a row: " + retryN
     ];
   });
 })();
