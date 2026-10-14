@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  Intake 0.2.0 (working name, was ByteBot) · a DigiDoughnut app · built 2026-10-13
+  Intake 0.3.0 (working name, was ByteBot) · a DigiDoughnut app · built 2026-10-13
   An AI food tracker: snap a photo, the AI names the foods and guesses the grams, and code works out
   every nutrient from the Canadian Nutrient File (Health Canada). Tracks day, week, month and year
   against the buyer's own targets, with plain advice.
@@ -18,6 +18,20 @@
     6. dd.ai: tier "fast" (Flash-Lite first, plain chat) and "full" (Flash first, photos).
     7. dd.helper: dictation is stopped and forgotten when the app goes to the background.
     8. dd.brand: brandPlace "bar" puts the tagline, banner picture and 🎨 in the top bar instead of a banner card.
+  0.4.0 (V4 handoff, Oran 2026-10-13): the microphone only ever starts from a real tap (counted in the support
+  report, with a one-time iPhone tip about Safari's per-site setting), and sending stops dictation so the box clears.
+  Menu → How I cook: salt per food group (heavy / light / low-salt) and cooking oil (type, light / heavy); the photo
+  screen and Add by typing ask how a food was cooked and add the oil as its own line. Busy photos (several plates or
+  lots of foods) get a "try one plate at a time" nudge instead of a bare error. Past days with nothing logged can be
+  marked as fasting or filled with the person's average day (Today on that day, or Trends), so trends stay honest.
+  ⚡ Add again: one-tap chips on Today for the things you have most, and a list with Most often / Recent tabs.
+  Platform change, marked "PLATFORM CHANGE (2026-10-13 V4)": dd.helper dictation (above).
+  0.3.0 (V3 handoff, Oran 2026-10-13): the home screen as an instrument cluster. Menu → Home screen & health turns
+  on fasting tracking, a 3-day fast reminder, health conditions and medicines (each adds its own gauges and food
+  flags) and hides any gauge. New everyday gauges: time since you last ate, meal balance, blood sugar load.
+  Platform change, marked "PLATFORM CHANGE (2026-10-13 V3)":
+    9. dd.setup / dd.pair: iPhone Home Screen steps say to leave "Open as Web App" off, and a copy opened as a
+       separate web app explains how to fix it.
   To make a new app, change only the parts marked PROGRAM-SPECIFIC (styles, markup, script)
   and the app name in the <head>.
 -->
@@ -823,6 +837,30 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 .ik-about p{margin:0 0 10px}
 .ik-photo-pick{display:flex;flex-direction:column;align-items:center;gap:10px;background:#fff;border-radius:22px;padding:26px 14px;text-align:center;margin:0 0 12px}
 
+/* V3 (2026-10-13): gauges, flags, Home screen & health switches */
+.ik-tileico{flex:none;width:44px;height:44px;border-radius:50%;background:var(--ik-grey);display:flex;align-items:center;justify-content:center;font-size:20px}
+.ik-macro.ik-tilewarn{background:var(--ik-amberbg);box-shadow:inset 0 0 0 2px var(--ik-amberline)}
+.ik-sechead{font-size:13px;font-weight:700;color:var(--ik-ink2);text-transform:uppercase;letter-spacing:.03em;margin:6px 2px 8px}
+.ik-alerts{border-left:5px solid var(--ik-vit);padding-top:12px;padding-bottom:8px}
+.ik-alert{display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--ik-line);padding:8px 0;font:inherit;font-size:14px;line-height:1.4;color:inherit;cursor:pointer}
+.ik-alert:last-of-type{border-bottom:0}
+.ik-alert.warn b{color:var(--ik-high)}
+.ik-eflag{display:inline-block;font-size:12px;font-weight:600;color:var(--ik-amber)}
+.ik-bal{display:inline-block;font-size:11px;font-weight:700;color:#1f7a36;background:var(--ik-fibre-soft);border-radius:99px;padding:1px 8px;white-space:nowrap}
+.ik-bal.mid{color:var(--ik-amber);background:var(--ik-amberbg)}
+.ik-bal.low{color:var(--ik-high);background:#ffe9ee}
+.ik-warn.soft{background:#f5f7ff;border-color:#dfe5ff;color:var(--ik-ink)}
+.ik-tog{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--ik-line);cursor:pointer}
+.ik-tog:last-child{border-bottom:0}
+.ik-tog .ik-grow b{display:block;font-size:15px}
+.ik-sw{appearance:none;-webkit-appearance:none;flex:none;width:46px;height:28px;border-radius:99px;background:#d2d2d7;position:relative;cursor:pointer;margin:0;transition:background .2s}
+.ik-sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.ik-sw:checked{background:var(--ik-fibre)}
+.ik-sw:checked::after{transform:translateX(18px)}
+.ik-sw:focus-visible{outline:3px solid var(--ik-ink);outline-offset:2px}
+.ik-customize{display:block;margin:0 auto 14px}
+@media (prefers-reduced-motion:reduce){.ik-sw,.ik-sw::after{transition:none}}
+
 </style>
 </head>
 <body>
@@ -876,7 +914,7 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 <div id="dd-layer"></div>     <!-- sheets and toasts render here -->
 
 <script>
-window.DD_BUILD = {"built":"2026-10-13","commit":"intake-0.2.0","platform":"0.1.0","home":""};
+window.DD_BUILD = {"built":"2026-10-13","commit":"intake-0.4.0","platform":"0.1.0","home":""};
 window.DD_LOGO = "data:image/webp;base64,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";
 /* qrcode-generator 1.4.4 by Kazuhiko Arase, MIT License — vendored so the page stays
    fully self-contained. QR codes are generated on-device; your access code never leaves the browser for this. */
@@ -1977,7 +2015,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       '<p class="dd-note" style="margin-top:0">Open your phone\'s camera and point it at this square. Tap the link that appears.</p>' +
       /* PLATFORM CHANGE (2026-10-13): on iPhone, a Home Screen icon keeps its own saved things, apart from Safari.
          So the order matters: scan, let it open in Safari, then add it to the Home Screen from there. */
-      '<p class="dd-note">iPhone: let the link open in Safari, then add it to your Home Screen from there. An icon you added earlier won\'t see what this square brings.</p>' +
+      /* PLATFORM CHANGE (2026-10-13 V3): leave "Open as Web App" off, or the icon gets its own empty storage. */
+      '<p class="dd-note">iPhone: let the link open in Safari, then add it to your Home Screen from there, and leave <b>Open as Web App</b> switched off. An icon you added earlier won\'t see what this square brings.</p>' +
       '<div class="dd-qr" id="dd-qr"></div>' +
       '<p class="dd-qr-timer" id="dd-qr-timer"></p>' +
       (hasCode ? '<label class="dd-check"><input type="checkbox" id="dd-qr-code" checked> Include my free access code, so the phone is ready to use</label>' +
@@ -3302,7 +3341,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     { keys: ["update", "new version", "upgrade"], a: "To put a new version online, upload the new file to the same place with exactly the same file name, replacing the old one. The address stays the same, so your numbers stay." },
     { keys: ["update", "new version", "upgrade"], for: /^host_tiiny/, a: "To put a new version online, log in to tiiny.host and use Update on the same project. That keeps the same address, so your numbers stay." },
     { keys: ["trial", "free trial", "solo"], for: /^host_tiiny/, a: "You don't need tiiny.host's free trial: tap Skip. The trial turns into a paid plan, and the free plan is all this program needs." },
-    { keys: ["home screen", "icon", "app", "bookmark", "shortcut"], a: "Bookmark it on your computer and add it to your Home Screen on your phone. Then it opens like an app, always from the same address, so your numbers are always there." },
+    { keys: ["home screen", "icon", "app", "bookmark", "shortcut"], a: "Bookmark it on your computer and add it to your Home Screen on your phone. Then it opens like an app, always from the same address, so your numbers are always there. On an iPhone, leave Open as Web App switched off." },
     { keys: ["phone", "iphone", "android", "mobile"], a: "Setting up the helper is easiest on a computer. Once it works, Send to my phone moves it over by scanning a code." }
   ];
   setup.suggestQuestions = function (wizardId) {
@@ -3895,6 +3934,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   setup.homeScreenSteps = function () {
     if (dd.env.isIOS) return ["Tap the <b>Share</b> button (a square with an arrow pointing up). In Safari it's at the bottom of the screen; in Chrome it's at the top, next to the address.",
                               "Scroll down and tap <b>" + esc(L("home_ios_add", "Add to Home Screen")) + "</b>.",
+                              /* PLATFORM CHANGE (2026-10-13 V3, Oran's iPhone test): with "Open as Web App" on, iOS gives the icon its own
+                                 sealed storage, so the access code, sync and numbers from Safari don't come along. */
+                              "Leave <b>" + esc(L("home_ios_webapp", "Open as Web App")) + "</b> switched <b>off</b>. Switched on, the icon gets its own separate storage and your code, sync and numbers from Safari won't be there.",
                               "Keep the name <b>" + esc(program ? program.name : "") + "</b>, then tap <b>" + esc(L("home_ios_confirm", "Add")) + "</b>."];
     return ["Tap the browser menu (the three dots <b>⋮</b>, top right).",
             "Tap <b>" + esc(L("home_android_add", "Add to Home screen")) + "</b> (some phones say <b>Install app</b>).",
@@ -3907,7 +3949,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var sh = dd.ui.sheet(got + dd.menu.headHtml({ title: "Add it to your Home Screen", icon: "📱" }) +
       '<p>Then it opens like an app, and your phone keeps your numbers safe.</p>' +
       '<ol class="dd-home-steps">' + setup.homeScreenSteps().map(function (t) { return "<li>" + t + "</li>"; }).join("") + '</ol>' +
-      (dd.env.isIOS ? '<p class="dd-note">Why it matters: an iPhone can clear a website\'s saved data if you don\'t open it for about a week. Programs on the Home Screen are kept.</p>' : "") +
+      (dd.env.isIOS ? '<p class="dd-note">Why it matters: an iPhone can clear a website\'s saved data if you don\'t open it for about a week. The icon makes it quick to open every day, and live sync (setup step 4) keeps a safe copy.</p>' : "") +
       '<p class="dd-note">From now on, open it from the Home Screen icon.</p>' +
       '<div class="dd-btnrow"><button class="dd-btn" data-close>Got it</button></div>');
     sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
@@ -3923,15 +3965,27 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var st = state(); if (st.homeShown || st.homeNudgeOff) return;
     var thing = program.dataLabel || "numbers";
     dd.ui.notice("home", "Add " + program.name + " to your Home Screen so your " + thing + (/s$/.test(thing) ? " don't" : " doesn't") + " get cleared." +
-      (dd.env.isIOS ? " An iPhone can clear a website's saved data if you don't open it for about 7 days. Home Screen apps are kept." : " It also opens like an app."), "info", [
+      (dd.env.isIOS ? " An iPhone can clear a website's saved data if you don't open it for about 7 days, and the icon makes it quick to open every day." : " It also opens like an app."), "info", [
       { label: "Show me how", primary: true, onClick: function () { dd.ui.clearNotice("home"); setup.showHomeScreen(); } },
       { label: "Not now", onClick: function () { var s = state(); s.homeNudgeOff = Date.now(); saveState(s); dd.ui.clearNotice("home"); } }
+    ]);
+  };
+
+  /* PLATFORM CHANGE (2026-10-13 V3): opened from an iPhone icon made with "Open as Web App" on. That copy has its own
+     sealed storage, so the setup from Safari isn't here. Say so once, plainly, with the fix. */
+  setup.webAppWarn = function () {
+    if (!program || !dd.env.isIOS || !dd.env.isStandalone) return;
+    var st = state(); if (st.webAppOk) return;
+    dd.ui.notice("webapp", "This icon was added with \"Open as Web App\" on, so it keeps its own separate storage: your access code, sync and numbers from Safari aren't here. To fix it, delete this icon, open " + program.name + " in Safari, tap Share, then Add to Home Screen, and leave Open as Web App off.", "warn", [
+      { label: "Show me how", primary: true, onClick: function () { dd.ui.clearNotice("webapp"); setup.showHomeScreen(); } },
+      { label: "Keep it this way", onClick: function () { var s2 = state(); s2.webAppOk = Date.now(); saveState(s2); dd.ui.clearNotice("webapp"); } }
     ]);
   };
 
   /* ---------- start ---------- */
   setup.start = function (p) {
     program = p;
+    dd.on("ready", function () { setTimeout(setup.webAppWarn, 1200); });
     setup.paint();
     dd.on("ai:changed", setup.paint);
     dd.on("sync:changed", function () { setup.paint(); setup.homeNudge(); });
@@ -4255,17 +4309,31 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     if (noSpeechT) { clearTimeout(noSpeechT); noSpeechT = null; }
     if (rec) { try { rec.stop(); } catch (e) {} }
   }
-  function micToggle() {
+  /* PLATFORM CHANGE (2026-10-13 V4, Oran: the microphone question still came up on every launch).
+     Belt and braces: the microphone can only start inside a real tap (e.isTrusted) on the 🎤 button, never
+     from code. Each start is counted for the support report, so if a prompt ever appears without a tap we
+     can see it. On iPhone, Safari asks once per visit unless the site is set to Allow: a one-time tip says how.
+     Sending a message stops dictation first, so its text can't come back into the box (V4 bug 1b). */
+  var micStarts = 0, micTipShown = false;
+  function micToggle(ev) {
     if (recOn) { micStop(); return; }
+    if (!ev || ev.isTrusted !== true) return;   // only a real tap may start the microphone
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return;
     var input = root && root.querySelector(".dd-helper-in");
     recBase = input ? input.value : "";
-    rec = new SR();
+    var me = rec = new SR();
+    micStarts++;
     rec.lang = navigator.language || "en-US";
-    rec.continuous = true;
+    rec.continuous = !dd.env.isIOS;   // iOS: one phrase per tap; continuous listening there misbehaves
     rec.interimResults = true;
     rec.maxAlternatives = 1;
+    if (dd.env.isIOS && !micTipShown && !dd.store.get("dd_mic_tip_v1")) {
+      micTipShown = true; dd.store.set("dd_mic_tip_v1", "1");
+      setTimeout(function () { dd.ui.notice("mictip", "Tip: if Safari asks about the microphone every time, tap aA in the address bar → Website Settings → Microphone → Allow.", "info",
+        [{ label: "Got it", onClick: function () { dd.ui.clearNotice("mictip"); } }]); }, 4000);
+    }
     rec.onresult = function (e) {
+      if (rec !== me || !recOn) return;   // dictation was stopped (message sent): ignore late words
       var t = "";
       for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
       var inp = root && root.querySelector(".dd-helper-in");
@@ -4282,9 +4350,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       if (err === "not-allowed" || err === "service-not-allowed" || err === "network") speechBlocked = true;
       micStop();
     };
-    rec.onend = function () { recOn = false; rec = null; if (root && document.body.contains(root)) paint(); };
+    rec.onend = function () { if (rec !== me) return; recOn = false; rec = null; if (root && document.body.contains(root)) paint(); };
     recOn = true; paint();
-    try { rec.start(); } catch (e) { recOn = false; rec = null; }
+    try { me.start(); } catch (e) { recOn = false; rec = null; }
+  }
+  /* Stop dictation without redrawing (used when a message is sent). */
+  function micHalt() {
+    if (noSpeechT) { clearTimeout(noSpeechT); noSpeechT = null; }
+    var r = rec; rec = null; recOn = false;
+    if (r) { try { r.onresult = null; r.onend = null; r.abort(); } catch (e) {} }
   }
 
   /* PLATFORM CHANGE (2026-10-13, Oran: the microphone question came up every time the app opened).
@@ -4496,7 +4570,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       b.addEventListener("click", function () { dd.agent.answer(b.getAttribute("data-agentyes") || b.getAttribute("data-agentno"), b.hasAttribute("data-agentyes")); });
     });
     var cb = root.querySelector("[data-clip]"); if (cb) cb.addEventListener("click", function () { if (!busy) dd.files.pick().then(function (f) { if (f) helper.addFile(f); }); });
-    var mb = root.querySelector("[data-mic]"); if (mb) mb.addEventListener("click", micToggle);
+    var mb = root.querySelector("[data-mic]"); if (mb) mb.addEventListener("click", function (e) { micToggle(e); });
     var nb = root.querySelector("[data-new]"); if (nb) nb.addEventListener("click", newChat);
     var hb = root.querySelector("[data-hide]"); if (hb) hb.addEventListener("click", closeBubble);
     var tb = root.querySelector("[data-turnon]"); if (tb) tb.addEventListener("click", function () { helper.need(); });
@@ -4694,6 +4768,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       helper.need();
       return Promise.resolve(null);
     }
+    micHalt();   // V4: stop dictation before clearing, or its words come back into the box
     if (input) { input.value = ""; growInput(input); }
     if (panelMode()) helper.open();
     var imgs = (opts && opts.images || []).filter(function (im) { return im && im.data; }).slice(0, 3);
@@ -4839,7 +4914,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   if (dd.diag) dd.diag.addSection("Helper", function () {
     if (!cfg) return ["No helper in this program."];
     var n = Object.keys(undos).length;
-    return [helper.name() + " · window: " + (mode || "-") + " · messages saved: " + msgs.length + " · undo steps kept: " + n + " · tools: " + ((program.tools || []).map(function (t) { return t.name; }).join(", ") || "none"),
+    return [helper.name() + " · window: " + (mode || "-") + " · messages saved: " + msgs.length + " · undo steps kept: " + n + " · tools: " + ((program.tools || []).map(function (t) { return t.name; }).join(", ") || "none") + " · microphone started this visit: " + micStarts + " (only by tapping 🎤)",
             "Last turn: " + (lastTurn ? lastTurn.at + " · " + lastTurn.secs + " s · " + (lastTurn.ok ? "answered" : "failed " + lastTurn.type) + " · model " + lastTurn.model + " · tools used: " + lastTurn.tools + (lastTurn.changed ? " · changed data" : "") : "none this visit")];
   });
 })();
@@ -6870,7 +6945,7 @@ var IK_N = [
 var IK_NBY = {}; IK_N.forEach(function (n) { IK_NBY[n.k] = n; });
 var IK_VITS = IK_N.filter(function (n) { return n.g === "Vitamins"; }).map(function (n) { return n.k; });
 var IK_MINS = IK_N.filter(function (n) { return n.g === "Minerals" && n.kind === "target"; }).map(function (n) { return n.k; });
-var IK_TARGETABLE = IK_N.filter(function (n) { return n.kind !== "info"; }).map(function (n) { return n.k; }).concat(["fat", "drinks"]);
+var IK_TARGETABLE = IK_N.filter(function (n) { return n.kind !== "info"; }).map(function (n) { return n.k; }).concat(["fat", "drinks", "netcarb"]);
 
 /* Supplements: typical amounts per tablet. The buyer can snap their own label for exact numbers. */
 var IK_SUPPS = {
@@ -6967,6 +7042,125 @@ function ikResolve(ref, d) {
   if (kind === "s:") { var s = IK_SUPPS[id]; return s ? { type: "supp", label: s.label, perServing: s.n, est: true, typical: true, kind: "supplement" } : null; }
   return null;
 }
+/* ===== V4 (2026-10-13): how the person cooks — salt per food group, cooking oil, cooking method =====
+   Food tables count home-cooked food plain (rice, boiled vegetables and roasted meat with no salt, no oil).
+   The person says how they usually salt each group and what fat they cook with. Salt is added to the
+   sodium of plain table foods in that group (never twice: foods already salty in the table are left alone).
+   Oil is added as its own line in the entry, from the cooking method, so it can be seen, changed or removed. */
+var IK_SALT_GROUPS = [
+  { k: "veg", label: "Vegetables & potatoes", keys: "broccoli carrots_cooked spinach_cooked onion_cooked mushrooms_cooked corn peas green_beans cauliflower zucchini brussels asparagus squash beets potato_baked potato_boiled sweet_potato" },
+  { k: "meat", label: "Meat, fish & eggs", keys: "chicken_breast chicken_thigh chicken_wings turkey beef_ground beef_ground_med steak roast_beef pork_chop pork_tenderloin lamb salmon cod tilapia egg" },
+  { k: "grains", label: "Rice, pasta & grains", keys: "rice_white rice_brown quinoa couscous pasta pasta_ww egg_noodles rice_noodles oatmeal" },
+  { k: "beans", label: "Beans & lentils", keys: "lentils chickpeas black_beans kidney_beans edamame" }
+];
+var IK_SALT_BY = {}; IK_SALT_GROUPS.forEach(function (g) { g.keys.split(" ").forEach(function (k) { IK_SALT_BY[k] = g.k; }); });
+/* mg of sodium added per 100 g of food. Light ≈ ⅔ tsp of salt per kg of food, heavy ≈ 1¾ tsp. */
+var IK_SALT_LEVELS = [{ k: "heavy", label: "Heavy", mg: 400 }, { k: "light", label: "Light", mg: 150 }, { k: "low", label: "Low-salt", mg: 0 }];
+var IK_OILS = [
+  { k: "olive", label: "Olive oil", ref: "t:olive_oil" }, { k: "canola", label: "Canola or vegetable oil", ref: "t:canola_oil" },
+  { k: "butter", label: "Butter", ref: "t:butter" }, { k: "coconut", label: "Coconut oil", ref: "t:coconut_oil" }, { k: "none", label: "I don't cook with oil", ref: null }
+];
+var IK_OIL_AMTS = [{ k: "light", label: "Light (a drizzle)" }, { k: "heavy", label: "Heavy (a good pour)" }];
+/* f: grams of oil taken up per gram of food, [light, heavy]. */
+var IK_METHODS = [
+  { k: "raw", label: "Raw or as is", f: [0, 0] }, { k: "boiled", label: "Boiled or steamed", f: [0, 0] },
+  { k: "grilled", label: "Grilled", f: [0.01, 0.025] }, { k: "baked", label: "Baked or roasted", f: [0.015, 0.04] },
+  { k: "panfried", label: "Pan-fried or sautéed", f: [0.03, 0.07] }, { k: "deepfried", label: "Deep-fried", f: [0.08, 0.14] }
+];
+var IK_METHOD_KEYS = IK_METHODS.map(function (m) { return m.k; });
+var IK_COOK_EXTRA = /^(tofu|shrimp|mushrooms|onion|pepper_red|pepper_green|kale|spinach|tomato|cabbage|egg_raw)$/;
+function ikCook(d) {
+  var c = (d && d.settings && d.settings.cooking) || {};
+  return { salt: Object.assign({ veg: "light", meat: "light", grains: "light", beans: "light" }, c.salt || {}),
+           oil: c.oil || "canola", oilAmt: c.oilAmt || "light", set: !!c.set };
+}
+function ikSaltAdd(d, key) {
+  var g = IK_SALT_BY[key]; if (!g) return 0;
+  var f = IK_FOODS[key]; if (f && f.n.na != null && f.n.na >= 200) return 0;   // already salted in the table
+  var lv = IK_SALT_LEVELS.filter(function (x) { return x.k === ikCook(d).salt[g]; })[0];
+  return lv ? lv.mg : 0;
+}
+/* A plain table food whose numbers change with how it's cooked (not already fried in the table). */
+function ikCookable(ref) {
+  if (!/^t:/.test(ref || "")) return false;
+  var k = ref.slice(2), f = IK_FOODS[k];
+  return !!f && f.kind === "food" && (!!IK_SALT_BY[k] || IK_COOK_EXTRA.test(k));
+}
+function ikOilGrams(d, method, g) {
+  var c = ikCook(d); if (c.oil === "none" || !(g > 0)) return 0;
+  var m = IK_METHODS.filter(function (x) { return x.k === method; })[0];
+  return m ? g * m.f[c.oilAmt === "heavy" ? 1 : 0] : 0;
+}
+function ikOilItem(d, grams) {
+  var c = ikCook(d), o = IK_OILS.filter(function (x) { return x.k === c.oil; })[0];
+  if (!o || !o.ref || !(grams >= 0.5)) return null;
+  return { ref: o.ref, g: Math.max(1, Math.round(grams)), name: o.label + " for cooking", oil: true };
+}
+function ikMethodSelect(attr, val) {
+  return '<label class="ik-label">Cooked how?</label><select class="ik-input" ' + attr + '><option value="">Not sure</option>' +
+    IK_METHODS.map(function (m) { return '<option value="' + m.k + '"' + (val === m.k ? " selected" : "") + ">" + m.label + "</option>"; }).join("") + "</select>";
+}
+function ikOpenCooking() {
+  var sh = dd.ui.sheet("", { sticky: false }); sh.classList.add("ik-sheet");
+  function paint() {
+    var d = dd.getData(), c = ikCook(d);
+    var chip = function (attr, val, on, label) { return '<button class="ik-chip" ' + attr + '="' + val + '" aria-pressed="' + on + '">' + ikEsc(label) + "</button>"; };
+    var h = '<div class="ik-sheettop"><h2>How I cook</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+      '<p class="ik-small" style="margin-top:0">Food tables count home cooking plain: no salt, no oil. Tell Intake how you usually cook and your sodium and fat numbers get closer to real. Changes count on every day.</p>' +
+      '<h3 class="ik-sechead">Salt</h3><div class="ik-card">' + IK_SALT_GROUPS.map(function (g) {
+        return '<div class="ik-label" style="margin-top:4px">' + ikEsc(g.label) + '</div><div class="ik-chips">' +
+          IK_SALT_LEVELS.map(function (l) { return chip("data-salt-" + g.k, l.k, c.salt[g.k] === l.k, l.label); }).join("") + "</div>";
+      }).join("") + '<p class="ik-small" style="margin:10px 0 0">Light is about ⅔ tsp of salt per kg of food, heavy about 1¾ tsp. Low-salt adds none.</p></div>' +
+      '<h3 class="ik-sechead">Cooking oil</h3><div class="ik-card"><div class="ik-chips">' +
+        IK_OILS.map(function (o) { return chip("data-oil", o.k, c.oil === o.k, o.label); }).join("") + "</div>" +
+        (c.oil !== "none" ? '<div class="ik-label">How much?</div><div class="ik-chips">' + IK_OIL_AMTS.map(function (a) { return chip("data-oilamt", a.k, c.oilAmt === a.k, a.label); }).join("") + "</div>" : "") +
+        '<p class="ik-small" style="margin:10px 0 0">When you say a food was pan-fried, roasted, grilled or deep-fried, Intake adds the oil as its own line in that meal, so you can see it and change it. Pan-fried food takes up about 3 g of oil per 100 g (light) or 7 g (heavy).</p></div>' +
+      '<button class="ik-btn wide" data-close>Done</button>';
+    sh.innerHTML = h;
+    var set = function (fn) { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings); var ck = Object.assign({}, dt.settings.cooking || {}); ck.salt = Object.assign({}, ck.salt || {}); fn(ck); ck.set = true; dt.settings.cooking = ck; }); paint(); };
+    sh.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", function () { var dt = dd.getData(); if (!ikCook(dt).set) set(function () {}); dd.ui.closeSheet(); }); });
+    IK_SALT_GROUPS.forEach(function (g) { sh.querySelectorAll("[data-salt-" + g.k + "]").forEach(function (b) { b.addEventListener("click", function () { var v = b.getAttribute("data-salt-" + g.k); set(function (ck) { ck.salt[g.k] = v; }); }); }); });
+    sh.querySelectorAll("[data-oil]").forEach(function (b) { b.addEventListener("click", function () { var v = b.getAttribute("data-oil"); set(function (ck) { ck.oil = v; }); }); });
+    sh.querySelectorAll("[data-oilamt]").forEach(function (b) { b.addEventListener("click", function () { var v = b.getAttribute("data-oilamt"); set(function (ck) { ck.oilAmt = v; }); }); });
+  }
+  paint();
+}
+
+/* ===== V4: days with nothing logged — mark as fasting, or fill with the person's average day =====
+   Stored as their own list (dayFills, one item per day) so they sync like entries. Real entries always win. */
+function ikFillMap(d) { var m = {}; (d.dayFills || []).forEach(function (f) { m[f.day] = f.kind; }); return m; }
+function ikFirstDay(d) { var first = null; (d.entries || []).forEach(function (e) { if (!first || e.day < first) first = e.day; }); return first; }
+/* Average totals of the real days logged in the last 60 days (before today). Needs 3 days. */
+function ikAvgDay(d) {
+  return ikMemo("avgday", function () {
+    var byDay = {}, today = ikToday(), from = ikAddDays(today, -60);
+    (d.entries || []).forEach(function (e) { if (e.day < today && e.day >= from) (byDay[e.day] = byDay[e.day] || []).push(e); });
+    var days = Object.keys(byDay), n = days.length; if (n < 3) return null;
+    var t = ikTotals([], d);
+    days.forEach(function (day) {
+      var x = ikTotals(byDay[day], d);
+      IK_N.forEach(function (nt) { t.v[nt.k] += x.v[nt.k] / n; t.miss[nt.k] += x.miss[nt.k] / n; });
+      t.drinksMl += x.drinksMl / n; t.items += x.items / n;
+    });
+    t.alcoholDrinks = t.v.alcohol / IK_EDITION.standardDrinkG; t.avgOf = n;
+    return t;
+  });
+}
+/* Past days (from the first day ever logged) in this list with nothing logged and nothing filled. */
+function ikGapDays(d, days) {
+  var first = ikFirstDay(d), today = ikToday(), has = {}, fills = ikFillMap(d);
+  if (!first) return [];
+  (d.entries || []).forEach(function (e) { has[e.day] = 1; });
+  return days.filter(function (day) { return day >= first && day < today && !has[day] && !fills[day]; });
+}
+function ikFillDays(days, kind) {
+  if (!days.length) return;
+  dd.update(function (dt) {
+    dt.dayFills = (dt.dayFills || []).filter(function (f) { return days.indexOf(f.day) < 0; });
+    if (kind === "fast" || kind === "avg") days.forEach(function (day) { dt.dayFills.push({ id: "f" + day, day: day, kind: kind }); });
+  });
+}
+
 /* -> {v:{k:number}, miss:{k:true}} for one item. A nutrient with no value is "not measured", never 0. */
 function ikItemNutrients(item, d) {
   var out = { v: {}, miss: {} };
@@ -6985,6 +7179,7 @@ function ikItemNutrients(item, d) {
     if (x == null) { if (r.type !== "supp") out.miss[n.k] = true; return; }
     out.v[n.k] = x * factor;
   });
+  if (r.food && out.v.na != null) out.v.na += ikSaltAdd(d, r.food.key) * factor;   // V4: how the person salts this food group
   return out;
 }
 /* Totals for a list of entries: {v, miss (how many items lacked it), items, entries, drinksMl, plants:{key:1}}. */
@@ -7055,6 +7250,12 @@ function ikRecommended(d) {
   out.caffeine.why = "Health Canada's maximum: 400 mg a day for adults, 300 mg when pregnant or breastfeeding.";
   out.drinks.why = "About how much water most people get from drinks each day (food gives the rest).";
   if (!out.sat) out.sat = { amount: dv.sat, why: "Canada's Daily Value." };
+  /* V3: health settings change a few targets. */
+  var hc = ikConds(d);
+  if (hc.hypertension) out.na = { amount: 2000, why: "About 2,000 mg a day is the usual advice for high blood pressure. Your doctor may give you a different number." };
+  else if (hc.kidney) out.na = { amount: 2000, why: "A common sodium limit with kidney disease. Your kidney team may give you a different number." };
+  if (hc.keto) out.netcarb = { amount: 25, why: "A common keto starting limit: most plans aim for 20 to 50 g of net carbs (carbs minus fibre) a day." };
+  else if (hc.diabetes) out.netcarb = { amount: null, why: "There's no one carb number for diabetes. Your diabetes team may give you one: type it in as yours." };
   return out;
 }
 function ikTarget(d, k) {
@@ -7081,9 +7282,15 @@ function ikTargetWarning(d, k, amount) {
 /* ---------- patterns over days: found by code, explained by the helper only when asked ---------- */
 function ikDaysBack(endDay, n) { var out = []; for (var i = n - 1; i >= 0; i--) out.push(ikAddDays(endDay, -i)); return out; }
 function ikDaySeries(d, days) {
-  var byDay = {};
+  var byDay = {}, fills = ikFillMap(d);
   (d.entries || []).forEach(function (e) { (byDay[e.day] = byDay[e.day] || []).push(e); });
-  return days.map(function (day) { var es = byDay[day] || []; return { day: day, logged: es.length > 0, t: ikTotals(es, d) }; });
+  return days.map(function (day) {
+    var es = byDay[day] || [];
+    if (es.length) return { day: day, logged: true, t: ikTotals(es, d) };
+    if (fills[day] === "fast") return { day: day, logged: true, filled: "fast", t: ikTotals([], d) };   // V4: a fasting day counts as zero
+    if (fills[day] === "avg") { var a = ikAvgDay(d); if (a) return { day: day, logged: true, filled: "avg", t: a }; }
+    return { day: day, logged: false, t: ikTotals([], d) };
+  });
 }
 /* -> [{k, label, kind, avgPct, daysUnder|daysOver, logged, trend}] sorted, worst first. */
 function ikPatterns(d, endDay, n) {
@@ -7100,6 +7307,7 @@ function ikPatterns(d, endDay, n) {
     var row = { k: nt.k, label: nt.label, unit: nt.unit, kind: nt.kind, avg: avg, target: tg, pct: pct, logged: series.length,
                 under: vals.filter(function (v) { return v < tg; }).length, over: vals.filter(function (v) { return v > tg; }).length };
     if (nt.k === "kcal") return;   // energy is never called "low" or "high": no shaming, just the ring
+    if ((nt.k === "k" || nt.k === "p") && ikConds(d).kidney) return;   // V3: with kidney disease, never push more potassium or phosphorus
     if (nt.kind === "limit") { if (pct > 100) high.push(row); }
     else if (pct < 75) low.push(row); else if (pct >= 100) good.push(row);
   });
@@ -7233,6 +7441,649 @@ function ikWaterTile(d, t, week, day) {
     '<div class="ik-waterbtns"><button class="ik-btn soft" data-act="water">＋ Glass of water</button><button class="ik-btn soft" data-act="drinkphoto">📷 Snap a drink</button></div></section>';
 }
 
+/* ===== V3 (2026-10-13): the instrument cluster =====
+   The home screen reads like an instrument cluster for the body: core gauges for everyone, plus gauges that
+   only appear when the person turns on fasting, a health condition or a medicine (menu → Home screen & health).
+   Any gauge can be hidden there. Every number is worked out here by code; the AI only explains it. */
+var IK_FINISH_MIN = 20;     // photo taken → finished eating (an estimate), used for meal-window edges
+var IK_FASTOK_KCAL = 15;    // an entry under this doesn't break a fast (water, black coffee, plain tea)
+var IK_MEMO = {};           // cleared on every change and every redraw
+function ikMemo(key, fn) { if (!(key in IK_MEMO)) IK_MEMO[key] = fn(); return IK_MEMO[key]; }
+
+var IK_EXTRA = {
+  drinks: { k: "drinks", label: "Drinks (water from drinks)", unit: "mL", dp: 0, kind: "target" },
+  netcarb: { k: "netcarb", label: "Net carbs (carbs minus fibre)", unit: "g", dp: 0, kind: "limit" }
+};
+function ikNt(k) { return IK_NBY[k] || IK_EXTRA[k] || { k: k, label: k, unit: "", dp: 0, kind: "target" }; }
+
+/* ---------- health settings ---------- */
+var IK_CONDS = [
+  { k: "diabetes", label: "Diabetes or prediabetes", note: "Net carbs and blood sugar load up front; meals likely to spike are flagged.",
+    advice: "Watch your blood sugar load and net carbs. Meals with protein, fibre and a little fat raise blood sugar more gently than carbs alone. Your diabetes team may give you your own carb amounts: set them in My targets." },
+  { k: "hypertension", label: "High blood pressure", note: "Sodium and potassium rings; sodium limit 2,000 mg; salty foods flagged.",
+    advice: "Keep sodium near 2,000 mg a day and get potassium from fruit, vegetables, beans and yogurt, unless your doctor has told you to limit potassium." },
+  { k: "kidney", label: "Kidney disease", note: "Sodium, potassium and phosphorus gauge; high foods flagged.",
+    advice: "Kidney diets differ a lot by stage. Ask your kidney team for your sodium, potassium, phosphorus and protein limits, then set them in My targets. Intake won't push you to eat more potassium or phosphorus." },
+  { k: "gout", label: "Gout", note: "Flags organ meats, beer, spirits, some seafood and sugary drinks.",
+    advice: "Beer, spirits, organ meats, some seafood and sugary drinks raise uric acid. Water and low-fat dairy are good choices." },
+  { k: "celiac", label: "Celiac or gluten-free", note: "Flags foods that usually contain gluten.",
+    advice: "Even small amounts of gluten matter. Intake flags foods that usually contain wheat, barley or rye, but always check the label for \"gluten-free\"." },
+  { k: "pregnancy", label: "Pregnancy", note: "Folate gauge; flags high-mercury and raw fish, raw egg, deli meats and alcohol.",
+    advice: "Avoid raw fish, high-mercury fish, raw eggs and alcohol, and heat deli meats and hot dogs until steaming hot. Keep caffeine under 300 mg. A prenatal vitamin with folic acid is recommended." },
+  { k: "anemia", label: "Low iron (anemia)", note: "Iron + vitamin C gauge; a nudge to pair them.",
+    advice: "Vitamin C helps your body absorb iron, so pair iron-rich foods with fruit or vegetables high in vitamin C. Have tea or coffee between meals instead of with them." },
+  { k: "bone", label: "Bone health", note: "Calcium and vitamin D side by side.",
+    advice: "Vitamin D helps your body use calcium. Aim for both targets every day. Vitamin D is hard to get from food in Canada, so many people take a supplement." },
+  { k: "keto", label: "Keto or low-carb", note: "Net carbs gauge (carbs minus fibre), 25 g limit to start.",
+    advice: "Net carbs are carbs minus fibre. Most keto plans aim for 20 to 50 g a day. You can set your own limit in My targets." }
+];
+var IK_MEDS = [
+  { k: "statin", label: "A statin (cholesterol pill)", note: "Flags grapefruit, which can raise some statins in your blood.",
+    advice: "Grapefruit and its juice can raise the level of some statins (simvastatin, lovastatin, atorvastatin) in your blood. Ask your pharmacist whether yours is affected." },
+  { k: "warfarin", label: "A blood thinner (warfarin)", note: "Vitamin K steadiness gauge; flags very high vitamin K foods.",
+    advice: "Vitamin K (leafy greens, broccoli) is fine to eat. Keep the amount about the same every day so your INR stays steady, and tell your doctor before big changes." }
+];
+function ikSet(d) { return (d && d.settings) || {}; }
+function ikConds(d) { return ikSet(d).conditions || {}; }
+function ikMeds(d) { return ikSet(d).meds || {}; }
+function ikFastCfg(d) { return ikSet(d).fasting || {}; }
+function ikCond(d, k) { return k === "pregnancy" ? !!(ikSet(d).profile || {}).pregnant : !!ikConds(d)[k]; }
+function ikMed(d, k) { return !!ikMeds(d)[k]; }
+function ikFastGoal(d) { var g = Number(ikFastCfg(d).goal); return g >= 10 && g <= 72 ? g : 16; }
+function ikWhenCond(k) { return function (d) { return ikCond(d, k); }; }
+
+/* Every gauge on the home screen. "when": it only exists while that setting is on. */
+var IK_GAUGES = [
+  { id: "hero", group: "Everyday", label: "Energy ring (protein, when calories are hidden)" },
+  { id: "alerts", group: "Everyday", label: "Heads up: sugar spikes and foods to watch" },
+  { id: "lastmeal", group: "Everyday", label: "Time since you last ate" },
+  { id: "balance", group: "Everyday", label: "Meal balance score" },
+  { id: "bsl", group: "Everyday", label: "Blood sugar load" },
+  { id: "drinks", group: "Everyday", label: "Drinks" },
+  { id: "vitmin", group: "Everyday", label: "Vitamins and minerals on target" },
+  { id: "tip", group: "Everyday", label: "{name}'s tip" },
+  { id: "m_protein", group: "Macros", label: "Protein" },
+  { id: "m_fat", group: "Macros", label: "Fat" },
+  { id: "m_carb", group: "Macros", label: "Carbs" },
+  { id: "m_sugar", group: "Macros", label: "Sugars" },
+  { id: "m_fibre", group: "Macros", label: "Fibre" },
+  { id: "m_sat", group: "Macros", label: "Saturated fat" },
+  { id: "fastwin", group: "Fasting", label: "Eating and fasting windows", when: function (d) { return !!ikFastCfg(d).track; } },
+  { id: "ketosis", group: "Fasting", label: "Ketosis estimate", when: function (d) { return !!ikFastCfg(d).track; } },
+  { id: "monthfast", group: "Fasting", label: "3-day fast reminder", when: function (d) { return !!ikFastCfg(d).monthly; } },
+  { id: "netcarb", group: "Health", label: "Net carbs", when: function (d) { return ikCond(d, "keto") || ikCond(d, "diabetes"); } },
+  { id: "nak", group: "Health", label: "Sodium vs potassium", when: ikWhenCond("hypertension") },
+  { id: "kidney", group: "Health", label: "Kidney watch (sodium, potassium, phosphorus)", when: ikWhenCond("kidney") },
+  { id: "gluten", group: "Health", label: "Gluten check", when: ikWhenCond("celiac") },
+  { id: "gout", group: "Health", label: "Gout watch", when: ikWhenCond("gout") },
+  { id: "preg", group: "Health", label: "Pregnancy: folate and foods to avoid", when: ikWhenCond("pregnancy") },
+  { id: "ironc", group: "Health", label: "Iron + vitamin C", when: ikWhenCond("anemia") },
+  { id: "cad", group: "Health", label: "Calcium + vitamin D", when: ikWhenCond("bone") },
+  { id: "vitk", group: "Health", label: "Vitamin K steadiness", when: function (d) { return ikMed(d, "warfarin"); } }
+];
+var IK_GBY = {}; IK_GAUGES.forEach(function (g) { IK_GBY[g.id] = g; });
+var IK_GCOND = { netcarb: ["keto", "diabetes"], nak: ["hypertension"], kidney: ["kidney"], gluten: ["celiac"], gout: ["gout"], preg: ["pregnancy"], ironc: ["anemia"], cad: ["bone"], vitk: ["warfarin"] };
+function ikAvail(d, id) { var g = IK_GBY[id]; return !!g && (!g.when || g.when(d)); }
+function ikShow(d, id) { return ikAvail(d, id) && !(ikSet(d).hidden || {})[id]; }
+
+/* ---------- time: when things were eaten ---------- */
+function ikEntryDate(e) { var p = String(e.day).split("-"), t = String(e.time || "12:00").split(":"); return new Date(+p[0], +p[1] - 1, +p[2], +t[0] || 0, +t[1] || 0); }
+function ikEntryKcalM(e, d) { return e.id ? ikMemo("k:" + e.id, function () { return ikEntryKcal(e, d); }) : ikEntryKcal(e, d); }
+/* Water, black coffee, plain tea and supplements don't break a fast. */
+function ikBreaksFast(e, d) { return e.kind !== "supplement" && ikEntryKcalM(e, d) > IK_FASTOK_KCAL; }
+function ikEatEvents(d) {
+  return ikMemo("ev", function () {
+    return (d.entries || []).filter(function (e) { return ikBreaksFast(e, d); }).map(function (e) {
+      var s = ikEntryDate(e).getTime(); return { start: s, end: s + IK_FINISH_MIN * 60000, e: e };
+    }).sort(function (a, b) { return a.start - b.start; });
+  });
+}
+function ikHM(ms) {
+  var m = Math.max(0, Math.round(ms / 60000)), h = Math.floor(m / 60);
+  if (h >= 48) return Math.floor(h / 24) + " d " + (h % 24) + " h";
+  return h ? h + " h " + (m % 60) + " m" : m + " m";
+}
+function ikFastState(d) {
+  var now = Date.now(), past = ikEatEvents(d).filter(function (x) { return x.start <= now; });
+  if (!past.length) return { none: true };
+  var lm = past[past.length - 1], since = Math.max(0, now - lm.end), hrs = since / 3600000;
+  // A long gap only counts as a fast when something (water, coffee, tea) was logged in the last day.
+  var recent = (d.entries || []).some(function (e) { var t = ikEntryDate(e).getTime(); return t <= now && now - t < 24 * 3600000; });
+  var tracking = hrs < 24 || recent;
+  return { last: lm, since: since, hrs: hrs, tracking: tracking, fasting: tracking && hrs >= 12 };
+}
+function ikEventsByDay(d) {
+  return ikMemo("evday", function () { var by = {}; ikEatEvents(d).forEach(function (x) { (by[x.e.day] = by[x.e.day] || []).push(x); }); return by; });
+}
+/* Hours from first bite to last bite on a finished day (null when nothing was eaten, or the day isn't over). */
+function ikFeedHours(d, day) {
+  if (day >= ikToday()) return null;
+  var xs = ikEventsByDay(d)[day]; if (!xs) return null;
+  return (xs[xs.length - 1].end - xs[0].start) / 3600000;
+}
+function ikWindows(d, endDay, n) {
+  var by = ikEventsByDay(d), feeds = [], fasts = [];
+  ikDaysBack(endDay, n).forEach(function (day) {
+    var f = ikFeedHours(d, day); if (f == null) return;
+    feeds.push(f * 3600000);
+    var prev = by[ikAddDays(day, -1)];
+    if (prev) fasts.push(by[day][0].start - prev[prev.length - 1].end);
+  });
+  var avg = function (a) { return a.length ? a.reduce(function (x, y) { return x + y; }, 0) / a.length : null; };
+  return { feed: avg(feeds), fast: avg(fasts), days: feeds.length };
+}
+/* Fasts of 60 hours or more. A gap only counts when every day inside it had something logged, so a few
+   days of not logging isn't mistaken for a fast. */
+function ikLongFasts(d) {
+  return ikMemo("longfast", function () {
+    var ev = ikEatEvents(d), logged = {}, out = [], now = Date.now(), gaps = [];
+    (d.entries || []).forEach(function (e) { logged[e.day] = 1; });
+    (d.dayFills || []).forEach(function (f) { if (f.kind === "fast") logged[f.day] = 1; });   // V4: days marked as fasting count
+    for (var i = 1; i < ev.length; i++) gaps.push({ a: ev[i - 1].end, b: ev[i].start });
+    if (ev.length) gaps.push({ a: ev[ev.length - 1].end, b: now, ongoing: true });
+    gaps.forEach(function (g) {
+      if (g.b - g.a < 60 * 3600000) return;
+      var d1 = ikDayKey(new Date(g.b)), k = ikAddDays(ikDayKey(new Date(g.a)), 1), ok = true;
+      while (k < d1) { if (!logged[k]) { ok = false; break; } k = ikAddDays(k, 1); }
+      if (ok) out.push(g);
+    });
+    return out;
+  });
+}
+function ikMonthFast(d) {
+  var p = ikSet(d).profile || {};
+  if (p.pregnant || p.breastfeeding) return { skip: true, msg: "Fasting isn't recommended while pregnant or breastfeeding, so there's no reminder." };
+  var lf = ikLongFasts(d), cur = lf.filter(function (g) { return g.ongoing; })[0];
+  if (cur) return { ongoing: true, hrs: (cur.b - cur.a) / 3600000 };
+  var last = lf.length ? lf[lf.length - 1] : null, first = "9999";
+  (d.entries || []).forEach(function (e) { if (e.day < first) first = e.day; });
+  var daysAgo = last ? (Date.now() - last.b) / 86400000 : null;
+  var history = first === "9999" ? 0 : (Date.now() - ikParseDay(first).getTime()) / 86400000;
+  return { last: last, daysAgo: daysAgo, due: last ? daysAgo > 30 : history > 30 };
+}
+/* Ketosis: a rough estimate from hours since eating and the carbs eaten in the day before that.
+   After a typical meal the liver's sugar store lasts about 14 to 24 hours; more carbs, longer. */
+function ikKetosis(d) {
+  return ikMemo("keto", function () {
+    var fs = ikFastState(d); if (fs.none) return null;
+    var end = fs.last.end, L = 0;
+    (d.entries || []).forEach(function (e) {
+      var t = ikEntryDate(e).getTime();
+      if (t > end - 24 * 3600000 && t <= end) { var v = ikTotals([e], d).v; L += Math.max(0, (v.carb || 0) - (v.fibre || 0)); }
+    });
+    var lowDays = 0;
+    for (var i = 1; i <= 3; i++) {
+      var es = ikEntriesOn(d, ikAddDays(ikToday(), -i)); if (!es.length) break;
+      var v = ikTotals(es, d).v; if ((v.carb || 0) - (v.fibre || 0) < 30) lowDays++; else break;
+    }
+    var adapted = lowDays >= 3, H = fs.hrs, T = adapted ? 0 : 14 + Math.min(250, L) / 250 * 10, level, pct;
+    if (adapted) { level = "Likely"; pct = 0.8; }
+    else if (H < T - 4) { level = "Unlikely"; pct = Math.max(0.05, H / T * 0.5); }
+    else if (H < T + 4) { level = "Possible"; pct = 0.5; }
+    else if (H < T + 24) { level = "Likely"; pct = 0.75; }
+    else { level = "Very likely"; pct = 1; }
+    return { level: level, pct: pct, T: T, L: L, H: H, adapted: adapted, lowDays: lowDays, inFor: adapted ? null : Math.max(0, H - T) };
+  });
+}
+
+/* ---------- meal balance and blood sugar load ---------- */
+/* Blood sugar load: a glycemic-load style estimate. Net carbs, softened by the fibre, protein and fat eaten
+   with them, raised when it's mostly sugar with no fibre or sugar in a drink. Per meal: under 10 is low,
+   20 and up is high. Per day: under 80 low, over 120 high. An estimate, not a measurement. */
+function ikMealStats(e, d) {
+  var v = ikTotals([e], d).v, kcal = v.kcal || 0, carb = v.carb || 0, fib = v.fibre || 0, sug = v.sugar || 0, pro = v.protein || 0, fat = v.fat || 0;
+  var net = Math.max(0, carb - fib), k = 0.72;
+  if (net > 0) { k -= 0.18 * Math.min(1, fib / (net * 0.25)); k -= 0.10 * Math.min(1, pro / (net * 0.6)); k -= 0.10 * Math.min(1, fat / (net * 0.5)); }
+  if (sug > net * 0.6 && fib < sug * 0.1) k += 0.08;
+  if (e.kind === "drink" && sug > 5) k += 0.05;
+  k = Math.max(0.25, Math.min(0.85, k));
+  var load = net * k, spike = sug >= 12 && fib < sug * 0.1 && load >= 12;
+  var out = { kcal: kcal, net: net, sug: sug, fib: fib, pro: pro, fat: fat, load: load, spike: spike, score: null, pS: 1, fS: 1, cS: 1 };
+  /* Balance score (meals of 80 kcal or more): protein 35 points (a quarter of the energy from protein),
+     fibre 30 (1.4 g per 100 kcal), gentle on blood sugar 35. */
+  if (e.kind === "food" && kcal >= 80) {
+    out.pS = Math.min(1, (pro * 4 / kcal) / 0.25);
+    out.fS = Math.min(1, (fib / (kcal / 100)) / 1.4);
+    out.cS = load <= 10 ? 1 : load >= 28 ? 0 : 1 - (load - 10) / 18;
+    out.score = Math.round(35 * out.pS + 30 * out.fS + 35 * out.cS);
+  }
+  return out;
+}
+function ikMealStatsM(e, d) { return e.id ? ikMemo("ms:" + e.id, function () { return ikMealStats(e, d); }) : ikMealStats(e, d); }
+function ikDayMeals(d, day) {
+  return ikMemo("dm:" + day, function () {
+    var load = 0, sc = [], spikes = [];
+    ikEntriesOn(d, day).forEach(function (e) {
+      if (e.kind === "supplement") return;
+      var m = ikMealStatsM(e, d); load += m.load;
+      if (m.score != null) sc.push(m.score);
+      if (m.spike) spikes.push(e);
+    });
+    return { load: load, balance: sc.length ? Math.round(sc.reduce(function (a, b) { return a + b; }, 0) / sc.length) : null, meals: sc.length, spikes: spikes };
+  });
+}
+function ikBalWord(s) { return s >= 75 ? "Well balanced" : s >= 50 ? "Fairly balanced" : "Unbalanced"; }
+function ikBalCls(s) { return s >= 75 ? "" : s >= 50 ? "mid" : "low"; }
+function ikLoadWord(load, daily) { return daily ? (load < 80 ? "Low" : load <= 120 ? "Medium" : "High") : (load < 10 ? "Low" : load < 20 ? "Medium" : "High"); }
+function ikBalTip(m) {
+  if (m.score == null) return "";
+  if (m.score >= 85) return "Good mix of protein, fibre and slow carbs.";
+  var w = Math.min(m.pS, m.fS, m.cS);
+  if (w === m.pS) return "Add some protein: eggs, yogurt, fish, chicken, tofu or beans.";
+  if (w === m.fS) return "Add fibre: vegetables, fruit, beans or whole grains.";
+  return "Lots of quick carbs or sugar. Pair them with protein and fibre, or have a smaller portion.";
+}
+
+/* ---------- flags: foods to watch, by the person's own health settings ---------- */
+function ikKeySet(s) { var o = {}; s.split(" ").forEach(function (k) { o[k] = 1; }); return o; }
+var IK_GLUTEN = ikKeySet("bread_white bread_ww bread_multi bread_rye bread_sourdough toast_white bagel english_muffin tortilla_flour pita roll_burger croissant muffin_blue pancake waffle crackers cereal_bran pasta pasta_ww egg_noodles ramen couscous pizza pizza_pepperoni burger cheeseburger sub burrito lasagna mac_cheese spaghetti_meat soup_chicken_noodle sandwich_ham sandwich_tuna cookie_choc cake_choc donut pretzels beer beer_light soy_sauce chicken_nuggets fish_sticks caesar_salad");
+var IK_GLUTEN_MAY = ikKeySet("oats_dry oatmeal granola granola_bar cheerios cereal_corn gravy poutine shepherds_pie beef_stew stir_fry hot_dog sausage");
+var IK_GLUTEN_RE = /\b(wheat|bread|toast|bagels?|pasta|spaghetti|macaroni|noodles?|couscous|barley|rye|seitan|crackers?|croissants?|muffins?|pancakes?|waffles?|pizza|buns?|pitas?|wraps?|sandwich(es)?|burgers?|subs?|cookies?|cakes?|donuts?|doughnuts?|pretzels?|beer|breaded|battered|panko|croutons?|flour|dumplings?|pastry|pies?|lasagna|ramen|udon|orzo|bulgur|farro|spelt)\b/;
+var IK_GLUTEN_OK_RE = /gluten[- ]?free|rice noodle|corn tortilla|rice paper|lettuce wrap/;
+var IK_GOUT_ALC = ikKeySet("beer beer_light spirits");
+var IK_GOUT_SUGAR = ikKeySet("cola energy_drink apple_juice oj sports_drink");
+var IK_GOUT_RE = /\b(liver|kidneys?|sweetbreads?|tripe|tongue|organ meats?|p[aâ]t[eé]|anchov(y|ies)|herring|mussels?|scallops?|sardines?|mackerel|trout|haggis|gizzards?)\b/;
+var IK_ALCOHOL = ikKeySet("beer beer_light wine_red wine_white spirits");
+var IK_ALCOHOL_RE = /\b(wine|beer|vodka|whisky|whiskey|rum|gin|tequila|cocktail|cider|sangria|margarita|martini)\b/;
+var IK_MERCURY_RE = /\b(shark|swordfish|marlin|king mackerel|tilefish|orange roughy|escolar|albacore|tuna steak|fresh tuna|ahi|bigeye)\b/;
+var IK_RAW_RE = /\b(sashimi|sushi|oysters?|ceviche|tartare|carpaccio|smoked salmon|lox|raw fish|poke)\b/;
+var IK_SOFTCHEESE_RE = /\b(brie|camembert|blue cheese|gorgonzola|roquefort|unpasteuri[sz]ed|raw milk|queso fresco)\b/;
+var IK_GRAPEFRUIT_RE = /grapefruit|pomelo|seville orange|tangelo/;
+var IK_CRANBERRY_RE = /cranberr/;
+var IK_PHOS_ADD = ikKeySet("cola diet_cola hot_dog salami ham deli_turkey sausage bacon chicken_nuggets");
+var IK_TEACOFFEE = ikKeySet("coffee espresso latte tea tea_green");
+
+function ikFlagsOn(d) {
+  var c = ikConds(d), m = ikMeds(d), p = ikSet(d).profile || {};
+  return { celiac: !!c.celiac, gout: !!c.gout, pregnancy: !!p.pregnant, kidney: !!c.kidney, hypertension: !!c.hypertension,
+    statin: !!m.statin, warfarin: !!m.warfarin, anemia: !!c.anemia, diabetes: !!c.diabetes, spikes: !!c.diabetes || ikShow(d, "balance") || ikShow(d, "bsl") };
+}
+/* Flags for one food. Table foods are matched by their id; foods the AI estimated, the person's own foods
+   and recipe names are matched by their words. -> [{lvl: "warn"|"note", cond, short, text}] */
+function ikItemFlags(it, d, on) {
+  var out = [], r = it.ref === "__tmp" ? null : ikResolve(it.ref, d), v = ikItemNutrients(it, d).v;
+  var lbl = it.name || (r ? r.label : "This food"), keys = [], free = [], all = [lbl];
+  if (r && r.food) keys.push(r.food.key); else free.push(lbl);
+  if (r && !r.food) { free.push(r.label); all.push(r.label); }
+  (it._ings || (r && r.recipe ? r.recipe.ingredients : []) || []).forEach(function (x) {
+    var rr = ikResolve(x.ref, d);
+    if (rr && rr.food) keys.push(rr.food.key); else free.push(x.name || (rr ? rr.label : ""));
+    all.push(x.name || (rr ? rr.label : ""));
+  });
+  if (r && r.food) all.push(r.label);
+  var ft = free.join(" | ").toLowerCase(), at = all.join(" | ").toLowerCase();
+  var has = function (set) { return keys.some(function (k) { return set[k]; }); };
+  var add = function (lvl, cond, short, text) { out.push({ lvl: lvl, cond: cond, short: short, text: lbl + ": " + text }); };
+  if (on.celiac) {
+    if (has(IK_GLUTEN) || (IK_GLUTEN_RE.test(ft) && !IK_GLUTEN_OK_RE.test(ft))) add("warn", "celiac", "Contains gluten", "usually contains gluten (wheat, barley or rye).");
+    else if (has(IK_GLUTEN_MAY)) add("note", "celiac", "May contain gluten", "may contain gluten. Check the label for \"gluten-free\".");
+  }
+  if (on.gout) {
+    var gt = ft.replace(/kidney beans?/g, "");
+    if (has(IK_GOUT_ALC)) add("warn", "gout", "Gout trigger", "beer and spirits raise uric acid and can set off a gout attack.");
+    if (has({ sardines: 1 }) || IK_GOUT_RE.test(gt)) add("warn", "gout", "High in purines", "high in purines, which can set off gout.");
+    if (has({ shrimp: 1 })) add("note", "gout", "Go easy (gout)", "moderate in purines. Keep the portion small.");
+    if (has(IK_GOUT_SUGAR)) add("note", "gout", "Sugary drink (gout)", "sugary drinks (fructose) raise uric acid.");
+  }
+  if (on.pregnancy) {
+    if (has({ sushi: 1, egg_raw: 1 }) || IK_RAW_RE.test(ft)) add("warn", "pregnancy", "Avoid in pregnancy", "raw fish, raw shellfish and raw egg can carry bacteria. Avoid them while pregnant (cooked or vegetable sushi is fine).");
+    if (IK_MERCURY_RE.test(at)) add("warn", "pregnancy", "High mercury", "high in mercury. Health Canada advises limiting it while pregnant.");
+    if (has(IK_ALCOHOL) || IK_ALCOHOL_RE.test(ft)) add("warn", "pregnancy", "Alcohol", "no amount of alcohol is known to be safe in pregnancy.");
+    if (has({ deli_turkey: 1, ham: 1, salami: 1, hot_dog: 1 })) add("note", "pregnancy", "Heat it first", "heat deli meats and hot dogs until steaming hot while pregnant (listeria).");
+    if (has({ tuna_canned: 1 })) add("note", "pregnancy", "Tuna", "canned light tuna is fine. Limit white (albacore) tuna.");
+    if (IK_SOFTCHEESE_RE.test(ft)) add("note", "pregnancy", "Pasteurized only", "soft and blue cheeses are only safe if made with pasteurized milk.");
+    if (/\b(liver|p[aâ]t[eé])\b/.test(ft)) add("note", "pregnancy", "Very high vitamin A", "liver is very high in vitamin A. Limit it while pregnant.");
+  }
+  if (on.kidney) {
+    if ((v.k || 0) >= 400) add("note", "kidney", "High potassium", "high in potassium (" + ikNum(v.k, 0) + " mg). Ask your kidney team if you should limit it.");
+    if ((v.p || 0) >= 250) add("note", "kidney", "High phosphorus", "high in phosphorus (" + ikNum(v.p, 0) + " mg).");
+    if (has(IK_PHOS_ADD)) add("note", "kidney", "Phosphate additives", "processed meats and colas often have phosphate additives, which the body absorbs easily.");
+  }
+  if ((on.hypertension || on.kidney) && (v.na || 0) >= 600) add("note", on.hypertension ? "hypertension" : "kidney", "High sodium", "high in sodium (" + ikNum(v.na, 0) + " mg).");
+  if (on.statin && IK_GRAPEFRUIT_RE.test(at)) add("warn", "statin", "Grapefruit + statin", "grapefruit can raise the level of some statins (simvastatin, lovastatin, atorvastatin) in your blood. Ask your pharmacist about yours.");
+  if (on.warfarin) {
+    if ((v.vitK || 0) >= 80) add("note", "warfarin", "High vitamin K", "high in vitamin K (" + ikNum(v.vitK, 0) + " µg). On warfarin, keep vitamin K about the same each day; you don't need to avoid it.");
+    if (IK_CRANBERRY_RE.test(at)) add("warn", "warfarin", "Cranberry + blood thinner", "large amounts of cranberry juice may change how warfarin works. Ask your pharmacist.");
+  }
+  return out;
+}
+function ikEntryFlags(e, d) {
+  var on = ikFlagsOn(d), out = [], seen = {};
+  var push = function (f) { if (!seen[f.text]) { seen[f.text] = 1; out.push(f); } };
+  (e.items || []).forEach(function (it) { ikItemFlags(it, d, on).forEach(push); });
+  if (e.kind !== "supplement") {
+    var m = e.id ? ikMealStatsM(e, d) : ikMealStats(e, d);
+    if (on.spikes && (m.spike || (on.diabetes && m.load >= 20)))
+      push({ lvl: on.diabetes ? "warn" : "note", cond: "sugar", short: "Likely sugar spike",
+        text: (m.spike ? "Sugar with little fibre: this will probably spike your blood sugar." : "A big carb load: this will probably raise your blood sugar a lot.") + " Having it with protein, fat or fibre softens the spike." });
+    if (on.anemia && e.kind === "food") {
+      var v = ikTotals([e], d).v;
+      if ((v.fe || 0) >= 2.5 && (v.vitC || 0) < 25) push({ lvl: "note", cond: "anemia", short: "Add vitamin C", text: "This meal has " + ikNum(v.fe, 1) + " mg of iron but little vitamin C. Add an orange, red pepper or strawberries to absorb more of the iron." });
+      var tc = (e.items || []).some(function (it) { var r = ikResolve(it.ref, d); return r && r.food && IK_TEACOFFEE[r.food.key]; });
+      if (tc && (v.fe || 0) >= 2.5) push({ lvl: "note", cond: "anemia", short: "Tea or coffee with iron", text: "Tea and coffee with a meal cut iron absorption. Have them an hour or so apart from iron-rich meals." });
+    }
+  }
+  return out.sort(function (a, b) { return (a.lvl === "warn" ? 0 : 1) - (b.lvl === "warn" ? 0 : 1); });
+}
+function ikEntryFlagsM(e, d) { return e.id ? ikMemo("fl:" + e.id, function () { return ikEntryFlags(e, d); }) : ikEntryFlags(e, d); }
+function ikDayFlags(d, es) {
+  var rows = [];
+  es.forEach(function (e) { ikEntryFlagsM(e, d).forEach(function (f) { rows.push({ f: f, e: e }); }); });
+  return rows.sort(function (a, b) { return (a.f.lvl === "warn" ? 0 : 1) - (b.f.lvl === "warn" ? 0 : 1); });
+}
+/* Plain words for the helper, so it speaks up about flags on food it just logged. */
+function ikFlagsForAI(e, d) {
+  var fl = ikEntryFlags(e, d); if (!fl.length) return "";
+  return " The program flagged (tell the person plainly, one short sentence each): " + fl.slice(0, 3).map(function (f) { return f.text; }).join(" ");
+}
+
+/* ---------- drawing gauges ---------- */
+/* One tile, in the same look as the macro tiles. o: {k, title, big, unit, sub (html), pct, rings, color, soft, icon, warn} */
+function ikTile(o) {
+  var ring = o.rings ? ikRingSvg(o.rings, 44, o.rings.length > 1 ? 5 : 7, 2)
+    : o.pct != null ? ikRingSvg([{ label: o.title, pct: o.pct, color: o.color || "var(--ik-ink2)", soft: o.soft || "var(--ik-grey)" }], 44, 7, 0)
+    : '<span class="ik-tileico" aria-hidden="true">' + (o.icon || "•") + "</span>";
+  return '<button class="ik-macro' + (o.warn ? " ik-tilewarn" : "") + '" data-act="gauge" data-k="' + ikEsc(o.k) + '" aria-label="' + ikEsc(o.title + ": " + String(o.big).replace(/<[^>]+>/g, "") + " " + (o.unit || "")) + '">' +
+    '<div class="ik-macrotop">' + ring + '<div class="ik-macrotx"><div class="ik-t">' + ikEsc(o.title) + '</div><div class="ik-n">' + o.big + (o.unit ? "<span> " + ikEsc(o.unit) + "</span>" : "") + "</div></div></div>" +
+    '<div class="ik-small ik-macronote">' + (o.sub || "") + "</div></button>";
+}
+function ikShortDay(day) { return day === ikToday() ? "" : ikDayName(day).replace(/^(\w+), .*/, "$1") + " "; }
+function ikLastMealTile(d) {
+  var fs = ikFastState(d), track = !!ikFastCfg(d).track, goal = ikFastGoal(d);
+  if (fs.none) return ikTile({ k: "lastmeal", icon: "⏱", title: "Since you last ate", big: "–", sub: "Nothing logged yet" });
+  var lm = fs.last.e, when = ikShortDay(lm.day) + ikNiceTime(lm.time);
+  if (!fs.tracking) return ikTile({ k: "lastmeal", icon: "⏱", title: "Last logged meal", big: ikHM(fs.since), unit: "ago", sub: ikEsc(ikEntryName(lm, d)) });
+  var sub = fs.fasting
+    ? (track ? (fs.hrs >= goal ? "✓ Past your " + goal + " h goal" : "Goal " + goal + " h · " + ikHM((goal - fs.hrs) * 3600000) + " to go") : "Nothing but water, coffee or tea since " + when)
+    : "Last ate " + when + " · " + ikEsc(ikEntryName(lm, d));
+  return ikTile({ k: "lastmeal", title: fs.fasting ? "Fasting" : "Since you last ate", big: ikHM(fs.since), sub: sub, icon: "⏱",
+    pct: track ? fs.hrs / goal : null, color: "var(--ik-water)", soft: "var(--ik-water-soft)" });
+}
+function ikKetoTile(d) {
+  var k = ikKetosis(d);
+  if (!k) return ikTile({ k: "ketosis", icon: "🔥", title: "Ketosis (estimate)", big: "–", sub: "Log a meal to start" });
+  var sub = k.adapted ? "Low-carb eating for " + k.lowDays + "+ days" : k.inFor > 0 ? "About " + ikHM(k.inFor * 3600000) + " so far" : "Likely from about " + Math.round(k.T) + " h after eating";
+  return ikTile({ k: "ketosis", title: "Ketosis (estimate)", big: k.level, sub: sub, pct: k.pct, color: "var(--ik-fat)", soft: "var(--ik-fat-soft)" });
+}
+function ikWindowTile(d, day) {
+  var w = ikWindows(d, day, 7);
+  return ikTile({ k: "fastwin", icon: "🕰️", title: "Eating window", big: w.feed != null ? ikHM(w.feed) : "–",
+    sub: w.fast != null ? "Fasting " + ikHM(w.fast) + " · 7-day average" : w.days ? "7-day average" : "Needs a full day logged" });
+}
+function ikMonthTile(d) {
+  var mf = ikMonthFast(d);
+  if (mf.skip) return ikTile({ k: "monthfast", icon: "🗓️", title: "3-day fast", big: "Off", sub: ikEsc(mf.msg) });
+  if (mf.ongoing) return ikTile({ k: "monthfast", title: "3-day fast", big: "Day " + (Math.floor(mf.hrs / 24) + 1), sub: "Fasting " + ikHM(mf.hrs * 3600000), pct: mf.hrs / 72, color: "var(--ik-water)", soft: "var(--ik-water-soft)" });
+  var ago = mf.daysAgo != null ? Math.round(mf.daysAgo) : null;
+  if (mf.due) return ikTile({ k: "monthfast", icon: "🗓️", title: "3-day fast", warn: true, big: ago != null ? ago : "None", unit: ago != null ? "days ago" : "yet", sub: "You haven't fasted in a while. Consider a fast." });
+  return ikTile({ k: "monthfast", icon: "🗓️", title: "3-day fast", big: ago != null ? ago : "None", unit: ago != null ? "days ago" : "yet",
+    sub: ago != null ? "Next one in about " + Math.max(1, 30 - ago) + " days" : "No 3-day fast logged yet" });
+}
+/* The everyday "body" gauges: time since you ate, meal balance, blood sugar load, and fasting when it's on. */
+function ikBodyCluster(d, t, day, isToday) {
+  var tiles = [];
+  if (isToday && ikShow(d, "lastmeal")) tiles.push(ikLastMealTile(d));
+  if (ikShow(d, "balance") || ikShow(d, "bsl")) {
+    var dm = ikDayMeals(d, day);
+    if (ikShow(d, "balance")) tiles.push(ikTile({ k: "balance", title: "Meal balance", big: dm.balance == null ? "–" : dm.balance, unit: dm.balance == null ? "" : "/ 100",
+      pct: dm.balance == null ? 0 : dm.balance / 100, color: "var(--ik-fibre)", soft: "var(--ik-fibre-soft)",
+      sub: dm.balance == null ? "Shows once you log a meal" : ikBalWord(dm.balance) + " · " + dm.meals + " meal" + (dm.meals === 1 ? "" : "s") }));
+    if (ikShow(d, "bsl")) tiles.push(ikTile({ k: "bsl", title: "Blood sugar load", big: ikNum(dm.load, 0), unit: "est.", pct: dm.load / 120,
+      color: dm.load > 120 ? "var(--ik-amber)" : "var(--ik-sugar)", soft: "var(--ik-sugar-soft)", warn: dm.spikes.length > 0 && ikCond(d, "diabetes"),
+      sub: ikLoadWord(dm.load, true) + (dm.spikes.length ? " · ⚠ " + dm.spikes.length + " likely spike" + (dm.spikes.length === 1 ? "" : "s") : " for the day") }));
+  }
+  if (isToday && ikShow(d, "ketosis")) tiles.push(ikKetoTile(d));
+  if (ikShow(d, "fastwin")) tiles.push(ikWindowTile(d, day));
+  if (ikShow(d, "monthfast")) tiles.push(ikMonthTile(d));
+  return tiles.length ? '<div class="ik-macros">' + tiles.join("") + "</div>" : "";
+}
+/* Gauges for the health conditions and medicines the person turned on: shown near the top. */
+function ikHealthCluster(d, t, week, day, es) {
+  var tiles = [], v = t.v, fl = null;
+  var flagsFor = function (cond) { fl = fl || ikDayFlags(d, es); return fl.filter(function (x) { return x.f.cond === cond; }); };
+  var names = function (rows) { var s = {}; rows.forEach(function (x) { s[ikEntryName(x.e, d)] = 1; }); return Object.keys(s).slice(0, 2).join(", "); };
+  if (ikShow(d, "netcarb")) {
+    var nc = Math.max(0, (v.carb || 0) - (v.fibre || 0)), ntg = ikTarget(d, "netcarb");
+    tiles.push(ikTile({ k: "netcarb", title: "Net carbs", big: ikNum(nc, 0), unit: ntg ? "/ " + ikNum(ntg, 0) + " g" : "g", pct: ntg ? nc / ntg : null, icon: "🍞",
+      color: ntg && nc > ntg ? "var(--ik-amber)" : "var(--ik-carb)", soft: "var(--ik-carb-soft)", warn: ntg && nc > ntg,
+      sub: "Carbs minus fibre" + (ntg ? (nc > ntg ? " · over your limit" : " · limit " + ikNum(ntg, 0) + " g") : " · set a limit in My targets") }));
+  }
+  if (ikShow(d, "nak")) {
+    var naT = ikTarget(d, "na"), kT = ikTarget(d, "k"), ratio = (v.k || 0) > 0 ? ((v.na || 0) / 23) / (v.k / 39.1) : null;
+    tiles.push(ikTile({ k: "nak", title: "Sodium vs potassium", big: ratio == null ? "–" : ikNum(ratio, 1), unit: "Na:K",
+      rings: [{ label: "Sodium", pct: naT ? (v.na || 0) / naT : 0, color: (v.na || 0) > naT ? "var(--ik-high)" : "var(--ik-energy)", soft: "var(--ik-energy-soft)" },
+              { label: "Potassium", pct: kT ? (v.k || 0) / kT : 0, color: "var(--ik-min)", soft: "var(--ik-min-soft)" }],
+      warn: ratio != null && ratio > 1 && t.items > 0,
+      sub: "Sodium " + ikNum(v.na, 0) + " / " + ikNum(naT, 0) + " mg · potassium " + ikNum(v.k, 0) + " mg · aim under 1" }));
+  }
+  if (ikShow(d, "kidney")) {
+    tiles.push(ikTile({ k: "kidney", icon: "🩺", title: "Kidney watch", big: ikNum(v.na, 0), unit: "mg sodium",
+      sub: "Potassium " + ikNum(v.k, 0) + " mg · phosphorus " + ikNum(v.p, 0) + " mg" }));
+  }
+  if (ikShow(d, "gluten")) {
+    var gl = flagsFor("celiac").filter(function (x) { return x.f.lvl === "warn"; }), gm = flagsFor("celiac").length - gl.length;
+    tiles.push(ikTile({ k: "gluten", icon: gl.length ? "⚠️" : "🌾", title: "Gluten check", warn: gl.length > 0, big: gl.length ? gl.length : "None", unit: gl.length ? (gl.length === 1 ? "food" : "foods") : "found",
+      sub: gl.length ? ikEsc(names(gl)) : gm ? gm + " may contain gluten" : "No gluten in what you logged" }));
+  }
+  if (ikShow(d, "gout")) {
+    var go = flagsFor("gout"), gw = go.filter(function (x) { return x.f.lvl === "warn"; });
+    tiles.push(ikTile({ k: "gout", icon: gw.length ? "⚠️" : "🦶", title: "Gout watch", warn: gw.length > 0, big: go.length ? go.length : "None", unit: go.length ? "to watch" : "today",
+      sub: go.length ? ikEsc(names(go)) : "No gout triggers logged" + (v.alcohol > 0 ? " · alcohol " + ikNum(v.alcohol / IK_EDITION.standardDrinkG, 1) + " drinks" : "") }));
+  }
+  if (ikShow(d, "preg")) {
+    var pf = flagsFor("pregnancy").filter(function (x) { return x.f.lvl === "warn"; }), folT = ikTarget(d, "folate");
+    tiles.push(ikTile({ k: "preg", title: "Pregnancy", big: ikNum(v.folate, 0), unit: "/ " + ikNum(folT, 0) + " µg folate", pct: folT ? (v.folate || 0) / folT : 0,
+      color: "var(--ik-vit)", soft: "var(--ik-vit-soft)", warn: pf.length > 0,
+      sub: pf.length ? "⚠ To avoid: " + ikEsc(names(pf)) : "Nothing to avoid today · caffeine " + ikNum(v.caffeine, 0) + " mg" }));
+  }
+  if (ikShow(d, "ironc")) {
+    var feT = ikTarget(d, "fe"), vcT = ikTarget(d, "vitC"), im = 0, paired = 0;
+    es.forEach(function (e) { if (e.kind !== "food") return; var ev = ikTotals([e], d).v; if ((ev.fe || 0) >= 2.5) { im++; if ((ev.vitC || 0) >= 25) paired++; } });
+    tiles.push(ikTile({ k: "ironc", title: "Iron + vitamin C", big: ikNum(v.fe, 1), unit: "/ " + ikNum(feT, 0) + " mg iron",
+      rings: [{ label: "Iron", pct: feT ? (v.fe || 0) / feT : 0, color: "var(--ik-min)", soft: "var(--ik-min-soft)" },
+              { label: "Vitamin C", pct: vcT ? (v.vitC || 0) / vcT : 0, color: "var(--ik-vit)", soft: "var(--ik-vit-soft)" }],
+      sub: "Vitamin C " + ikNum(v.vitC, 0) + " mg" + (im ? " · " + paired + " of " + im + " iron meals had C" : "") }));
+  }
+  if (ikShow(d, "cad")) {
+    var caT = ikTarget(d, "ca"), vdT = ikTarget(d, "vitD");
+    tiles.push(ikTile({ k: "cad", title: "Calcium + vitamin D", big: ikNum(v.ca, 0), unit: "/ " + ikNum(caT, 0) + " mg",
+      rings: [{ label: "Calcium", pct: caT ? (v.ca || 0) / caT : 0, color: "var(--ik-min)", soft: "var(--ik-min-soft)" },
+              { label: "Vitamin D", pct: vdT ? (v.vitD || 0) / vdT : 0, color: "var(--ik-vit)", soft: "var(--ik-vit-soft)" }],
+      sub: "Vitamin D " + ikNum(v.vitD, 1) + " / " + ikNum(vdT, 0) + " µg" }));
+  }
+  if (ikShow(d, "vitk")) {
+    var prev = week.filter(function (s) { return s.logged && s.day !== day; }), avg = prev.length ? prev.reduce(function (a, s) { return a + (s.t.v.vitK || 0); }, 0) / prev.length : null;
+    var r = avg ? (v.vitK || 0) / avg : null, word = r == null ? "Needs a few days logged" : r < 0.7 ? "Lower than usual" : r > 1.3 ? "Higher than usual" : "Steady ✓";
+    tiles.push(ikTile({ k: "vitk", title: "Vitamin K", big: ikNum(v.vitK, 0), unit: "µg", pct: r == null ? null : Math.min(r, 2) / 2, icon: "🥬",
+      color: r != null && (r < 0.7 || r > 1.3) ? "var(--ik-amber)" : "var(--ik-fibre)", soft: "var(--ik-fibre-soft)", warn: r != null && t.items > 0 && (r < 0.7 || r > 1.3),
+      sub: word + (avg ? " · usual " + ikNum(avg, 0) + " µg" : "") }));
+  }
+  return tiles.length ? '<div class="ik-sechead">Your health gauges</div><div class="ik-macros">' + tiles.join("") + "</div>" : "";
+}
+function ikAlertsCard(d, es) {
+  var rows = ikDayFlags(d, es); if (!rows.length) return "";
+  return '<section class="ik-card ik-alerts" aria-label="Heads up"><div class="ik-sechead" style="margin-top:0">Heads up</div>' + rows.slice(0, 4).map(function (x) {
+    return '<button class="ik-alert ' + x.f.lvl + '" data-entry="' + ikEsc(x.e.id) + '"><span aria-hidden="true">' + (x.f.lvl === "warn" ? "⚠️" : "💡") + '</span><span class="ik-grow"><b>' + ikEsc(x.f.short) + "</b> · " + ikEsc(x.f.text) + "</span></button>";
+  }).join("") + (rows.length > 4 ? '<div class="ik-small">+' + (rows.length - 4) + " more in the food list.</div>" : "") + "</section>";
+}
+/* The small line under an entry in the food list: balance chip and its first flag. */
+function ikEntryBadges(e, d) {
+  if (e.kind === "supplement") return "";
+  var m = ikMealStatsM(e, d), fl = ikEntryFlagsM(e, d), bits = [];
+  if (m.score != null && ikShow(d, "balance")) bits.push('<span class="ik-bal ' + ikBalCls(m.score) + '">Balance ' + m.score + "</span>");
+  if (fl.length) bits.push('<span class="ik-eflag">' + (fl[0].lvl === "warn" ? "⚠ " : "💡 ") + ikEsc(fl[0].short) + (fl.length > 1 ? " +" + (fl.length - 1) : "") + "</span>");
+  return bits.length ? "<br>" + bits.join(" ") : "";
+}
+/* Inside an entry's sheet: its balance, blood sugar load and every flag. */
+function ikEntryBalanceHtml(e, d) {
+  if (e.kind === "supplement" || !(e.items || []).length) return "";
+  var m = ikMealStats(e, d), fl = ikEntryFlags(e, d), h = '<div class="ik-card">';
+  if (m.score != null) h += '<div class="ik-row"><b class="ik-grow">Meal balance</b><span class="ik-bal ' + ikBalCls(m.score) + '">' + m.score + " / 100 · " + ikBalWord(m.score) + '</span></div><p class="ik-small" style="margin:4px 0 8px">' + ikEsc(ikBalTip(m)) + "</p>";
+  h += '<div class="ik-row"><b class="ik-grow">Blood sugar load</b><span>' + ikNum(m.load, 0) + " · " + ikLoadWord(m.load) + '</span></div><p class="ik-small" style="margin:4px 0 0">Net carbs ' + ikNum(m.net, 0) + " g · sugars " + ikNum(m.sug, 0) + " g · fibre " + ikNum(m.fib, 1) + " g. An estimate, not a measurement.</p>";
+  fl.forEach(function (f) { h += '<div class="ik-warn' + (f.lvl === "warn" ? "" : " soft") + '">' + (f.lvl === "warn" ? "⚠️ " : "💡 ") + ikEsc(f.text) + "</div>"; });
+  return h + "</div>";
+}
+/* On the photo screen, before Add: what this meal will flag. */
+function ikPhotoFlagsHtml(P, d) {
+  if (!P.items.length) return "";
+  var tmp = { kind: P.items.every(function (it) { return it.drink; }) ? "drink" : "food", items: ikPhotoLogItems(P, d) };
+  var fl = ikEntryFlags(tmp, d), m = ikMealStats(tmp, d), h = "";
+  if (m.score != null && ikShow(d, "balance")) h += '<p class="ik-small" style="margin:0 0 8px">Meal balance about <b>' + m.score + "/100</b> (" + ikBalWord(m.score).toLowerCase() + ") · blood sugar load " + ikNum(m.load, 0) + " (" + ikLoadWord(m.load).toLowerCase() + ").</p>";
+  fl.forEach(function (f) { h += '<div class="ik-warn' + (f.lvl === "warn" ? "" : " soft") + '">' + (f.lvl === "warn" ? "⚠️ " : "💡 ") + ikEsc(f.text) + "</div>"; });
+  return h;
+}
+
+/* ---------- Trends: blood sugar load and eating window ---------- */
+function ikBucketMap(b, fn) {
+  var vals = b.days.filter(function (s) { return s.logged; }).map(fn).filter(function (x) { return x != null; });
+  return vals.length ? vals.reduce(function (a, x) { return a + x; }, 0) / vals.length : null;
+}
+function ikLoadSpec(d, series, span) {
+  var bs = ikBucket(series, span);
+  return { type: "bars", buckets: bs, target: 80, targetLabel: "80, the top of a low day", series: [{ k: "gload", label: "Blood sugar load", unit: "", color: "var(--ik-sugar)",
+    vals: bs.map(function (b) { return ikBucketMap(b, function (s) { return ikDayMeals(d, s.day).load; }); }) }] };
+}
+function ikFeedSpec(d, series, span) {
+  var bs = ikBucket(series, span), goal = ikFastGoal(d);
+  return { type: "bars", buckets: bs, target: 24 - goal, targetLabel: (24 - goal) + " h, the eating window for a " + goal + " h fast", series: [{ k: "feed", label: "Eating window", unit: "h", color: "var(--ik-water)",
+    vals: bs.map(function (b) { return ikBucketMap(b, function (s) { return ikFeedHours(d, s.day); }); }) }] };
+}
+function ikExtraChartBody(d, series, span, id) {
+  var sp = id === "load" ? ikLoadSpec(d, series, span) : ikFeedSpec(d, series, span);
+  var body = ikChartSvg(sp, id + "-big").replace('style="height:130px"', 'style="height:260px"');
+  body += '<div class="ik-tblwrap"><table class="ik-tbl"><thead><tr><th>' + (span === "year" ? "Month" : "Day") + "</th><th>" + ikEsc(sp.series[0].label) + (sp.series[0].unit ? " (" + sp.series[0].unit + ")" : "") + "</th>" +
+    (id === "load" ? "<th>Meal balance</th>" : "") + "</tr></thead><tbody>" + sp.buckets.map(function (b, i) {
+      var bal = id === "load" ? ikBucketMap(b, function (s) { return ikDayMeals(d, s.day).balance; }) : null;
+      return "<tr><td>" + ikEsc(b.full) + "</td><td>" + (sp.series[0].vals[i] == null ? "–" : ikNum(sp.series[0].vals[i], 1)) + "</td>" + (id === "load" ? "<td>" + (bal == null ? "–" : ikNum(bal, 0)) + "</td>" : "") + "</tr>";
+    }).join("") + "</tbody></table></div>";
+  body += '<p class="ik-small">' + (id === "load"
+    ? "Blood sugar load is an estimate from net carbs, softened by the fibre, protein and fat eaten with them. Under 80 a day is low, over 120 is high. A glucose meter measures the real thing."
+    : "From your first bite to your last, using photo times plus about " + IK_FINISH_MIN + " minutes to finish eating. Today isn't counted until it's over.") + "</p>";
+  return body;
+}
+
+/* ---------- Advice: health notes ---------- */
+function ikHealthNotes(d) {
+  var rows = [];
+  IK_CONDS.forEach(function (c) { if (ikCond(d, c.k)) rows.push([c.label, c.advice]); });
+  IK_MEDS.forEach(function (m) { if (ikMed(d, m.k)) rows.push(["You take " + m.label.replace(/^A /, "a "), m.advice]); });
+  if (ikFastCfg(d).track) { var w = ikWindows(d, ikToday(), 7); rows.push(["Intermittent fasting", w.days ? "Last 7 days: eating window " + ikHM(w.feed) + (w.fast != null ? ", fasting " + ikHM(w.fast) : "") + " on average. Your goal is a " + ikFastGoal(d) + " h fast." : "Log a few full days to see your eating and fasting windows."]); }
+  if (ikFastCfg(d).monthly) {
+    var mf = ikMonthFast(d);
+    rows.push(["3-day fast", mf.skip ? mf.msg : mf.ongoing ? "You're on day " + (Math.floor(mf.hrs / 24) + 1) + " of a fast. Drink plenty of water, and stop if you feel faint or unwell."
+      : mf.due ? "You haven't fasted in a while. Consider a fast." + (ikCond(d, "diabetes") ? " With diabetes, talk to your doctor first, especially if you take insulin or diabetes pills." : "")
+      : mf.last ? "Your last 3-day fast ended " + Math.round(mf.daysAgo) + " days ago." : "No 3-day fast logged yet."]);
+  }
+  if (!rows.length) return "";
+  return '<h2 class="ik-h2">Your health settings</h2><section class="ik-list">' + rows.map(function (r) {
+    return '<div class="ik-adv"><div class="ik-row"><span>' + ikEsc(r[0]) + "</span></div><p>" + ikEsc(r[1]) + "</p></div>"; }).join("") +
+    '<div class="ik-adv"><button class="ik-btn ghost" data-act="gauges">Change health settings</button></div></section>';
+}
+
+/* ---------- a gauge, explained (tap any tile) ---------- */
+function ikOpenGauge(k) {
+  var d = dd.getData(), day = IK_UI.day || ikToday(), es = ikEntriesOn(d, day), t = ikTotals(es, d), g = IK_GBY[k], name = dd.helper ? dd.helper.name() : "DigiBot";
+  var title = g ? g.label.replace("{name}", name) : "Gauge", body = "";
+  var line = function (key) { var nt = ikNt(key), tg = ikTarget(d, key), v = key === "netcarb" ? Math.max(0, t.v.carb - t.v.fibre) : t.v[key];
+    return '<div class="ik-row" style="justify-content:space-between;padding:4px 0"><span>' + ikEsc(nt.label) + "</span><b>" + ikNum(v, nt.dp) + " " + nt.unit + (tg ? ' <span class="ik-small">/ ' + ikNum(tg, nt.dp) + (nt.kind === "limit" ? " max" : "") + "</span>" : "") + "</b></div>"; };
+  if (k === "lastmeal") {
+    var fs = ikFastState(d), w = ikWindows(d, ikToday(), 7);
+    body = "<p>" + (fs.none ? "Nothing logged yet." : "You last ate " + ikEsc(ikEntryName(fs.last.e, d)) + " at " + ikNiceTime(fs.last.e.time) + (fs.last.e.day === ikToday() ? "" : " on " + ikEsc(ikLongDate(fs.last.e.day))) + ". That's " + ikHM(fs.since) + " ago.") + "</p>" +
+      '<p class="ik-small">Time counts from when you finished eating: the photo time plus about ' + IK_FINISH_MIN + " minutes. Water, black coffee, plain tea and supplements don't count as eating, so if that's all you log, Intake knows you're fasting. No need to start a fast.</p>" +
+      (w.days ? "<p>Last 7 days: eating window " + ikHM(w.feed) + (w.fast != null ? ", fasting " + ikHM(w.fast) : "") + " on average.</p>" : "");
+  } else if (k === "balance" || k === "bsl") {
+    var dm = ikDayMeals(d, day);
+    body = es.filter(function (e) { return e.kind !== "supplement"; }).map(function (e) {
+      var m = ikMealStatsM(e, d);
+      return '<div class="ik-adv"><div class="ik-row"><span class="ik-grow">' + ikEsc(ikEntryName(e, d)) + "</span>" + (m.score != null ? '<span class="ik-bal ' + ikBalCls(m.score) + '">' + m.score + "</span>" : "") + "</div><p>" +
+        "Blood sugar load " + ikNum(m.load, 0) + " (" + ikLoadWord(m.load).toLowerCase() + ")" + (m.spike ? " · ⚠ likely spike" : "") + (m.score != null ? ". " + ikEsc(ikBalTip(m)) : "") + "</p></div>";
+    }).join("") || "<p>Nothing logged yet.</p>";
+    body += '<p><b>Today:</b> balance ' + (dm.balance == null ? "–" : dm.balance + "/100") + " · blood sugar load " + ikNum(dm.load, 0) + " (" + ikLoadWord(dm.load, true).toLowerCase() + ").</p>" +
+      '<p class="ik-small">Meal balance: up to 35 points for protein, 30 for fibre and 35 for going easy on blood sugar. Blood sugar load is an estimate from net carbs, softened by the fibre, protein and fat eaten with them: under 80 a day is low, over 120 high. A glucose meter measures the real thing.</p>';
+  } else if (k === "ketosis") {
+    var kz = ikKetosis(d);
+    body = kz ? "<p><b>" + ikEsc(kz.level) + ".</b> " + (kz.adapted ? "Your net carbs have been under 30 g a day for " + kz.lowDays + "+ days, so your body is probably using fat for fuel." :
+      "You've gone " + ikHM(kz.H * 3600000) + " since eating, with " + ikNum(kz.L, 0) + " g of net carbs in the day before. Ketosis usually starts around " + Math.round(kz.T) + " h after a meal like that" + (kz.inFor > 0 ? ", so about " + ikHM(kz.inFor * 3600000) + " so far." : ".")) + "</p>" : "<p>Log a meal to start.</p>";
+    body += '<p class="ik-small">A rough estimate from time and carbs, not a measurement. A blood or breath ketone meter tells you for sure.</p>';
+  } else if (k === "fastwin") {
+    var by = ikEventsByDay(d);
+    body = ikDaysBack(ikAddDays(ikToday(), -1), 7).reverse().map(function (dk) {
+      var xs = by[dk]; if (!xs) return '<div class="ik-row" style="justify-content:space-between;padding:4px 0"><span>' + ikEsc(ikShortDate(dk)) + '</span><span class="ik-small">nothing eaten logged</span></div>';
+      return '<div class="ik-row" style="justify-content:space-between;padding:4px 0"><span>' + ikEsc(ikShortDate(dk)) + "</span><b>" + ikNiceTime(xs[0].e.time) + " – " + ikNiceTime(xs[xs.length - 1].e.time) + ' <span class="ik-small">· ' + ikHM(xs[xs.length - 1].end - xs[0].start) + "</span></b></div>";
+    }).join("") + '<p class="ik-small">Eating window: first bite to last bite (photo time plus about ' + IK_FINISH_MIN + " minutes to finish). Fasting window: from the last bite of one day to the first bite of the next.</p>";
+  } else if (k === "monthfast") {
+    var mf = ikMonthFast(d);
+    body = "<p>" + (mf.skip ? mf.msg : mf.ongoing ? "You're on day " + (Math.floor(mf.hrs / 24) + 1) + " (" + ikHM(mf.hrs * 3600000) + ")." : mf.last ? "Your last 3-day fast ended " + Math.round(mf.daysAgo) + " days ago." : "No 3-day fast logged yet.") +
+      (mf.due ? " You haven't fasted in a while. Consider a fast." : "") + "</p>" +
+      '<p class="ik-small">A fast is found on its own: 60 hours or more with only water, coffee or tea logged. Drink plenty of water, and stop if you feel faint or unwell. Long fasts aren\'t for everyone: talk to your doctor first if you have diabetes, take medicine, are underweight, or have had an eating disorder.</p>';
+  } else {
+    var conds = IK_GCOND[k] || [], keys = { netcarb: ["netcarb", "carb", "fibre"], nak: ["na", "k"], kidney: ["na", "k", "p", "protein"], preg: ["folate", "fe", "caffeine"], ironc: ["fe", "vitC"], cad: ["ca", "vitD"], vitk: ["vitK"], gout: ["alcohol"] }[k] || [];
+    conds.forEach(function (c) { var x = IK_CONDS.concat(IK_MEDS).filter(function (y) { return y.k === c; })[0]; if (x && (ikCond(d, c) || ikMed(d, c))) body += "<p>" + ikEsc(x.advice) + "</p>"; });
+    body += keys.map(line).join("");
+    var fl = ikDayFlags(d, es).filter(function (x) { return conds.indexOf(x.f.cond) >= 0 || (k === "kidney" && x.f.cond === "kidney"); });
+    fl.forEach(function (x) { body += '<div class="ik-warn' + (x.f.lvl === "warn" ? "" : " soft") + '">' + (x.f.lvl === "warn" ? "⚠️ " : "💡 ") + ikEsc(x.f.text) + "</div>"; });
+    body += '<p class="ik-small">A reference, not medical advice. Your doctor, pharmacist or dietitian knows your situation best.</p>';
+  }
+  var sh = dd.ui.sheet('<div class="ik-sheettop"><h2>' + ikEsc(title) + '</h2><button class="ik-x" data-close aria-label="Close">✕</button></div><div class="ik-card">' + body + "</div>" +
+    '<div class="ik-quick"><button class="ik-btn soft" data-askg>💬 Ask ' + ikEsc(name) + '</button><button class="ik-btn soft" data-gs>🎛️ Home screen &amp; health</button></div>');
+  sh.classList.add("ik-sheet");
+  sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
+  sh.querySelector("[data-gs]").addEventListener("click", function () { ikOpenGauges(); });
+  sh.querySelector("[data-askg]").addEventListener("click", function () { dd.ui.closeSheet(); dd.helper.ask("Explain my " + title.toLowerCase() + " gauge today in plain words, and give me one easy idea."); });
+}
+
+/* ---------- settings: Home screen & health ---------- */
+function ikOpenGauges() {
+  var sh = dd.ui.sheet("", { sticky: false }); sh.classList.add("ik-sheet");
+  var row = function (attr, on, title, note) {
+    return '<label class="ik-tog"><span class="ik-grow"><b>' + ikEsc(title) + "</b>" + (note ? '<span class="ik-small">' + ikEsc(note) + "</span>" : "") + '</span><input type="checkbox" class="ik-sw" ' + attr + (on ? " checked" : "") + ' aria-label="' + ikEsc(title) + '"></label>';
+  };
+  function paint() {
+    var d = dd.getData(), s = ikSet(d), f = ikFastCfg(d), p = s.profile || {}, hidden = s.hidden || {}, name = dd.helper ? dd.helper.name() : "DigiBot", h = "";
+    h += '<div class="ik-sheettop"><h2>Home screen &amp; health</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+      '<p class="ik-small" style="margin-top:0">Your home screen works like a dashboard for your body. Turn on what applies to you: each adds its own gauges and warnings. You can hide any gauge at the bottom.</p>';
+    h += '<h3 class="ik-sechead">Fasting</h3><div class="ik-card">' +
+      row('data-fast="track"', f.track, "Track intermittent fasting", "Eating and fasting windows, a fasting goal and a ketosis estimate. If you only log water, coffee or tea, Intake knows you're fasting.") +
+      (f.track ? '<label class="ik-tog"><span class="ik-grow"><b>Fasting goal</b></span><select class="ik-input" data-goal style="width:auto;min-height:38px">' +
+        [12, 14, 16, 18, 20, 24].map(function (n) { return '<option value="' + n + '"' + (ikFastGoal(d) === n ? " selected" : "") + ">" + n + " hours (" + n + ":" + (24 - n > 0 ? 24 - n : 0) + ")</option>"; }).join("") + "</select></label>" : "") +
+      row('data-fast="monthly"', f.monthly, "3-day fast every month", "A reminder when it's been over a month since your last 3-day fast.") + "</div>";
+    h += '<h3 class="ik-sechead">Health conditions</h3><div class="ik-card">' + IK_CONDS.map(function (c) {
+      if (c.k === "pregnancy" && p.sex === "m") return "";
+      return row('data-cond="' + c.k + '"', ikCond(d, c.k), c.label, c.note);
+    }).join("") + "</div>";
+    h += '<h3 class="ik-sechead">Medicines I take</h3><div class="ik-card">' + IK_MEDS.map(function (m) { return row('data-med="' + m.k + '"', ikMed(d, m.k), m.label, m.note); }).join("") + "</div>";
+    var groups = {};
+    IK_GAUGES.forEach(function (g) { if (ikAvail(d, g.id)) (groups[g.group] = groups[g.group] || []).push(g); });
+    h += '<h3 class="ik-sechead">On my home screen</h3><div class="ik-card">' + ["Everyday", "Macros", "Fasting", "Health"].map(function (gr) {
+      if (!groups[gr]) return "";
+      return '<div class="ik-ngroup" style="margin:6px 0 0">' + gr + "</div>" + groups[gr].map(function (g) {
+        if (g.id === "m_protein" && ikHideKcal(d)) return "";
+        return row('data-g="' + g.id + '"', !hidden[g.id], g.label.replace("{name}", name), "");
+      }).join("");
+    }).join("") + "</div>";
+    h += '<p class="ik-small">Health settings stay on your devices. Intake is a reference, not medical advice: your doctor, pharmacist or dietitian knows your situation best.</p>';
+    sh.innerHTML = h;
+    sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
+    var set = function (fn) { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings); fn(dt.settings); }); paint(); };
+    sh.querySelectorAll("[data-fast]").forEach(function (c) { c.addEventListener("change", function () { var k = c.getAttribute("data-fast"); set(function (st) { st.fasting = Object.assign({}, st.fasting); st.fasting[k] = c.checked; }); }); });
+    var gs = sh.querySelector("[data-goal]"); if (gs) gs.addEventListener("change", function () { set(function (st) { st.fasting = Object.assign({}, st.fasting, { goal: +gs.value }); }); });
+    sh.querySelectorAll("[data-cond]").forEach(function (c) { c.addEventListener("change", function () {
+      var k = c.getAttribute("data-cond");
+      set(function (st) {
+        if (k === "pregnancy") { st.profile = Object.assign({}, st.profile, { pregnant: c.checked }); return; }
+        st.conditions = Object.assign({}, st.conditions); if (c.checked) st.conditions[k] = true; else delete st.conditions[k];
+      });
+    }); });
+    sh.querySelectorAll("[data-med]").forEach(function (c) { c.addEventListener("change", function () {
+      var k = c.getAttribute("data-med"); set(function (st) { st.meds = Object.assign({}, st.meds); if (c.checked) st.meds[k] = true; else delete st.meds[k]; });
+    }); });
+    sh.querySelectorAll("[data-g]").forEach(function (c) { c.addEventListener("change", function () {
+      var k = c.getAttribute("data-g"); set(function (st) { st.hidden = Object.assign({}, st.hidden); if (c.checked) delete st.hidden[k]; else st.hidden[k] = true; });
+    }); });
+  }
+  paint();
+}
+
 /* ---------- Today ---------- */
 function ikRenderToday(ctx) {
   var d = ctx.data, day = IK_UI.day || ikToday(), isToday = day === ikToday();
@@ -7244,22 +8095,45 @@ function ikRenderToday(ctx) {
   if (!ikProfileReady(p)) {
     h += '<div class="ik-card ik-setup"><b>Make the targets yours</b><p class="ik-small" style="margin:4px 0 10px">Right now your targets are Canada\'s Daily Values. Add your age, height, weight and how active you are for amounts made for you. About a minute.</p>' +
       '<button class="ik-btn" data-act="profile">Set my targets</button></div>';
+  } else if (!ikCook(d).set) {   // V4
+    h += '<div class="ik-card ik-setup"><b>How do you cook?</b><p class="ik-small" style="margin:4px 0 10px">Food tables count home cooking with no salt and no oil. Tell Intake how much you salt and what oil you use, and your sodium and fat numbers get closer to real. About 30 seconds.</p>' +
+      '<div class="ik-quick" style="margin:0"><button class="ik-btn" data-act="cooking">Set how I cook</button><button class="ik-btn ghost" data-act="cookdefault">Light salt, a little oil</button></div></div>';
+  }
+  if (!isToday && !es.length && ikFirstDay(d) && day >= ikFirstDay(d)) {   // V4: a past day with nothing logged
+    var fk = ikFillMap(d)[day], av = ikAvgDay(d);
+    h += fk ? '<div class="ik-card ik-setup"><b>' + (fk === "fast" ? "Marked as a fasting day" : "Filled with your average day") + '</b><p class="ik-small" style="margin:4px 0 10px">' +
+        (fk === "fast" ? "It counts as zero in your trends, and toward fasting." : "Trends count it as your usual day" + (av ? ", from the " + av.avgOf + " days you logged recently" : "") + ".") + " Snap or add food here and the real food counts instead.</p>" +
+        '<button class="ik-btn ghost" data-fill="clear" data-scope="day">Undo</button></div>'
+      : '<div class="ik-card ik-setup"><b>Nothing logged this day</b><p class="ik-small" style="margin:4px 0 10px">Left blank, it\'s skipped in your averages. Did you fast, or eat about like usual?</p>' +
+        '<div class="ik-quick" style="margin:0"><button class="ik-btn" data-fill="fast" data-scope="day">I was fasting</button>' +
+        (av ? '<button class="ik-btn ghost" data-fill="avg" data-scope="day">Fill with my average</button>' : '<span class="ik-small">Log 3 days to fill with your average.</span>') + "</div></div>";
   }
   /* Oran, 2026-10-13 (V2): the top of Today is one big energy ring, then a ring and a small 7-day graph for
      every macro (fats, carbs, sugars and the rest), then drinks, then vitamins and minerals. The food list
      comes after. With calories hidden, protein takes the big ring. */
   var week = ikDaySeries(d, ikDaysBack(day, 7));
   h += '<div class="ik-todaygrid"><div>';
-  h += ikHeroRing(d, t, week, day);
-  h += '<div class="ik-macros">' + ikMacroDefs(d).map(function (m) { return ikMacroTile(d, t, week, m, day); }).join("") + "</div>";
-  h += ikWaterTile(d, t, week, day);
-  var vit = ikMetCount(d, t, IK_VITS), min = ikMetCount(d, t, IK_MINS);
-  h += '<div class="ik-minis ik-minis2">' +
-    '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Vitamins on target</div><div class="ik-n">' + vit + "<span> of " + IK_VITS.length + '</span></div><div class="ik-bar" style="background:var(--ik-vit-soft)"><i style="width:' + Math.round(vit / IK_VITS.length * 100) + '%;background:var(--ik-vit)"></i></div></button>' +
-    '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Minerals on target</div><div class="ik-n">' + min + "<span> of " + IK_MINS.length + '</span></div><div class="ik-bar" style="background:var(--ik-min-soft)"><i style="width:' + Math.round(min / IK_MINS.length * 100) + '%;background:var(--ik-min)"></i></div></button></div>';
-  var tip = ikTopTip(d, day);
-  h += '<section class="ik-tip"><svg class="ik-tipring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="var(--ik-vit)" stroke-width="7"/></svg>' +
-    '<div class="ik-tiptext"><b>' + ikEsc(name) + ":</b> " + ikEsc(tip.text) + (tip.k ? '<br><button class="ik-link" data-ask="tip" data-k="' + ikEsc(tip.k) + '">Ask ' + ikEsc(name) + " about this</button>" : "") + "</div></section>";
+  /* V3 (2026-10-13): the instrument cluster. Warnings first, then gauges for the health settings the person
+     turned on, then the everyday body gauges, the macros, drinks and vitamins. Any of them can be hidden. */
+  if (ikShow(d, "hero")) h += ikHeroRing(d, t, week, day);
+  if (ikShow(d, "alerts")) h += ikAlertsCard(d, es);
+  h += ikHealthCluster(d, t, week, day, es);
+  h += ikBodyCluster(d, t, day, isToday);
+  var macros = ikMacroDefs(d).filter(function (m) { return ikShow(d, "m_" + m.k); });
+  if (macros.length) h += '<div class="ik-macros">' + macros.map(function (m) { return ikMacroTile(d, t, week, m, day); }).join("") + "</div>";
+  if (ikShow(d, "drinks")) h += ikWaterTile(d, t, week, day);
+  if (ikShow(d, "vitmin")) {
+    var vit = ikMetCount(d, t, IK_VITS), min = ikMetCount(d, t, IK_MINS);
+    h += '<div class="ik-minis ik-minis2">' +
+      '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Vitamins on target</div><div class="ik-n">' + vit + "<span> of " + IK_VITS.length + '</span></div><div class="ik-bar" style="background:var(--ik-vit-soft)"><i style="width:' + Math.round(vit / IK_VITS.length * 100) + '%;background:var(--ik-vit)"></i></div></button>' +
+      '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Minerals on target</div><div class="ik-n">' + min + "<span> of " + IK_MINS.length + '</span></div><div class="ik-bar" style="background:var(--ik-min-soft)"><i style="width:' + Math.round(min / IK_MINS.length * 100) + '%;background:var(--ik-min)"></i></div></button></div>';
+  }
+  if (ikShow(d, "tip")) {
+    var tip = ikTopTip(d, day);
+    h += '<section class="ik-tip"><svg class="ik-tipring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="var(--ik-vit)" stroke-width="7"/></svg>' +
+      '<div class="ik-tiptext"><b>' + ikEsc(name) + ":</b> " + ikEsc(tip.text) + (tip.k ? '<br><button class="ik-link" data-ask="tip" data-k="' + ikEsc(tip.k) + '">Ask ' + ikEsc(name) + " about this</button>" : "") + "</div></section>";
+  }
+  h += '<button class="ik-link ik-customize" data-act="gauges">🎛️ Choose what shows here</button>';
   h += "</div><div>";
   // the food list, grouped by part of day; drinks and supplements together at the end
   var groups = { morning: [], afternoon: [], evening: [], other: [] };
@@ -7273,12 +8147,17 @@ function ikRenderToday(ctx) {
       var right = hide ? ikNum(et.v.protein, 0) + "<span> g protein</span>" : ikNum(et.v.kcal, 0) + "<span> kcal</span>";
       listHtml += '<button class="ik-entry" data-entry="' + ikEsc(e.id) + '"><span class="ik-ico ' + icon + '" aria-hidden="true">' + (IK_PART_ICON[icon] || "🍽️") + "</span>" +
         '<span class="ik-grow"><span class="ik-ewhen">' + IK_PARTS[e.part] + " · " + ikNiceTime(e.time) + '</span><br><span class="ik-ename">' + ikEsc(ikEntryName(e, d)) + "</span>" + (et.est ? '<span class="ik-est">estimated</span>' : "") +
-        (e.note ? '<br><span class="ik-enote">' + ikEsc(e.note) + "</span>" : "") + '</span><span class="ik-ekcal">' + right + "</span></button>";
+        (e.note ? '<br><span class="ik-enote">' + ikEsc(e.note) + "</span>" : "") + ikEntryBadges(e, d) + '</span><span class="ik-ekcal">' + right + "</span></button>";
     });
   });
+  /* V4 (Oran, 2026-10-13): one tap for the things you have all the time (a glass of water, the usual coffee). */
+  var usual = ikUsual(d, "common").slice(0, 4);
+  if (usual.length) h += '<div class="ik-sechead">Add again</div><div class="ik-chips" style="margin:0 0 14px">' + usual.map(function (u) {
+    return '<button class="ik-chip" data-again="' + ikEsc(u.sig) + '">＋ ' + ikEsc(u.name) + "</button>"; }).join("") +
+    '<button class="ik-chip" data-act="again">More…</button></div>';
   h += '<h2 class="ik-h2" style="margin-top:4px">Food' + (es.length ? "" : "") + "</h2>";
   h += '<section class="ik-list">' + (listHtml || '<div class="ik-empty">Nothing logged ' + (isToday ? "yet today" : "on this day") + '.<br>Tap the camera to snap your food, or add it by typing.</div>') + "</section>";
-  h += '<div class="ik-quick"><button class="ik-btn" data-act="photo">📷 Snap my food</button><button class="ik-btn ghost" data-act="add">＋ Add by typing</button>' +
+  h += '<div class="ik-quick"><button class="ik-btn" data-act="photo">📷 Snap my food</button><button class="ik-btn ghost" data-act="again">⚡ Add again</button><button class="ik-btn ghost" data-act="add">＋ Add by typing</button>' +
     '<button class="ik-btn ghost" data-act="forgot">🕐 Forgot a meal?</button><button class="ik-btn ghost" data-act="supp">💊 Supplement</button></div>';
   h += "</div></div>";
   // every nutrient, folded away
@@ -7325,8 +8204,9 @@ function ikRenderTrends(ctx) {
     '<div class="ik-seg" role="tablist" aria-label="Time span">' + ["day", "week", "month", "year"].map(function (s) {
       return '<button role="tab" data-span="' + s + '" aria-selected="' + (s === span) + '">' + s.charAt(0).toUpperCase() + s.slice(1) + "</button>"; }).join("") + "</div>" +
     '<div class="ik-daynav"><button data-spanmove="-1" aria-label="Earlier">‹</button><button data-spanmove="1" aria-label="Later"' + (end >= ikToday() ? " disabled" : "") + ">›</button></div></div>";
+  var fillCard = ikFillCard(d, days, series);   // V4
   if (!logged.length) {
-    h += '<div class="ik-card ik-empty">Nothing logged in this ' + span + ' yet. Snap your food and your charts fill in here.</div>';
+    h += fillCard + '<div class="ik-card ik-empty">Nothing logged in this ' + span + ' yet. Snap your food and your charts fill in here.</div>';
     ctx.ui.$("ikTrends").innerHTML = h; return;
   }
   var hide = ikHideKcal(d);
@@ -7336,14 +8216,14 @@ function ikRenderTrends(ctx) {
     h += '<div class="ik-dayrings" style="grid-template-columns:repeat(' + series.length + ',minmax(0,1fr))">' + series.map(function (s) {
       var rk = hide ? "protein" : "kcal", tg = ikTarget(d, rk);
       return "<div>" + ikRingSvg([{ label: hide ? "Protein" : "Energy", pct: s.logged && tg ? s.t.v[rk] / tg : 0, color: hide ? "var(--ik-protein)" : "var(--ik-energy)", soft: hide ? "var(--ik-protein-soft)" : "var(--ik-energy-soft)" }], 40, 6, 0) +
-        "<div" + (s.day === ikToday() ? ' style="color:var(--ik-ink)"' : "") + ">" + ikWeekday1(s.day) + "</div></div>"; }).join("") + "</div>";
+        "<div" + (s.day === ikToday() ? ' style="color:var(--ik-ink)"' : "") + ">" + ikWeekday1(s.day) + (s.filled ? "<small>" + (s.filled === "fast" ? " F" : " ≈") + "</small>" : "") + "</div></div>"; }).join("") + "</div>";
   } else h += ikChartSvg(ikBarsSpec(d, series, span, hide ? "protein" : "kcal"), "summary");
   var plantsN = Object.keys(all.plants).length;
   h += '<div class="ik-avgs">' + (hide ? "" : '<div><div class="ik-small">Avg energy</div><div class="ik-n">' + ikNum(all.v.kcal / n, 0) + "</div></div>") +
     '<div><div class="ik-small">Avg protein</div><div class="ik-n">' + ikNum(all.v.protein / n, 0) + " g</div></div>" +
     '<div><div class="ik-small">' + (span === "week" ? "Plants this week" : "Different plants") + '</div><div class="ik-n">' + plantsN + (span === "week" ? " / 30" : "") + "</div></div>" +
     (hide ? '<div><div class="ik-small">Days logged</div><div class="ik-n">' + logged.length + " of " + series.length + "</div></div>" : "") + "</div>";
-  h += '<p class="ik-small" style="margin:8px 0 0">Averages are over the ' + logged.length + " day" + (logged.length === 1 ? "" : "s") + " you logged.</p></section>";
+  h += '<p class="ik-small" style="margin:8px 0 0">Averages are over the ' + logged.length + " day" + (logged.length === 1 ? "" : "s") + " you logged" + (function () { var f = series.filter(function (x) { return x.filled; }).length; return f ? " (including " + f + " filled: F = fasting, ≈ = your average)" : ""; })() + ".</p></section>" + fillCard;
   // chart cards
   h += '<p class="ik-small" style="margin:0 0 10px">Click or tap any chart to open it full size, with every number.</p><div class="ik-charts">';
   if (!hide) h += ikChartCard("energy", "Energy", "target " + ikNum(ikTarget(d, "kcal"), 0) + " kcal", '<div class="ik-big">' + ikNum(all.v.kcal / n, 0) + " <span>avg kcal a day</span></div>" + ikChartSvg(ikLineSpec(d, series, span, "kcal"), "energy"));
@@ -7352,6 +8232,17 @@ function ikRenderTrends(ctx) {
   var satTg = ikTarget(d, "sat");
   h += ikChartCard("fats", "Kinds of fat", "avg " + ikNum(all.v.fat / n, 0) + " g a day", ikFatBars(d, all, n));
   h += ikChartCard("vitmin", "Vitamins and minerals", "average, % of your own target", ikVitMinBars(d, all, n, 8), true);
+  /* V3: blood sugar load (with meal balance) and, with fasting on, the eating window */
+  if (ikShow(d, "bsl") || ikShow(d, "balance")) {
+    var dms = logged.map(function (s) { return ikDayMeals(d, s.day); }), bals = dms.filter(function (x) { return x.balance != null; });
+    var lavg = dms.reduce(function (a, x) { return a + x.load; }, 0) / n, bavg = bals.length ? Math.round(bals.reduce(function (a, x) { return a + x.balance; }, 0) / bals.length) : null;
+    h += ikChartCard("load", "Blood sugar load", "estimate · " + ikLoadWord(lavg, true).toLowerCase() + " on average",
+      '<div class="ik-big">' + ikNum(lavg, 0) + " <span>avg a day" + (bavg != null ? " · meal balance " + bavg + "/100" : "") + "</span></div>" + ikChartSvg(ikLoadSpec(d, series, span), "load"));
+  }
+  if (ikFastCfg(d).track) {
+    var wnd = ikWindows(d, end, Math.min(days.length, 30));
+    h += ikChartCard("feed", "Eating window", "first bite to last bite", '<div class="ik-big">' + (wnd.feed != null ? ikHM(wnd.feed) : "–") + " <span>avg" + (wnd.fast != null ? " · fasting " + ikHM(wnd.fast) : "") + "</span></div>" + ikChartSvg(ikFeedSpec(d, series, span), "feed"));
+  }
   h += "</div>";
   // running low / high
   var pat = ikPatterns(d, end, span === "day" ? 7 : Math.min(days.length, 30));
@@ -7363,6 +8254,17 @@ function ikRenderTrends(ctx) {
       return '<div class="ik-adv"><div class="ik-row"><span>' + ikEsc(x.label) + '</span><span class="ik-hi">' + Math.round(x.pct) + "% of the upper amount</span></div><p>" + ikEsc(ikHighWhere(d, x.k, end)) + "</p></div>"; }).join("") + "</section>";
   }
   ctx.ui.$("ikTrends").innerHTML = h;
+}
+/* V4: offer to fill the days in this span with nothing logged. */
+function ikFillCard(d, days, series) {
+  var gaps = ikGapDays(d, days), filled = series.filter(function (x) { return x.filled; }).length, av = ikAvgDay(d), h = "";
+  if (gaps.length) h += '<section class="ik-card"><b>' + gaps.length + " day" + (gaps.length === 1 ? "" : "s") + " with nothing logged</b>" +
+    '<p class="ik-small" style="margin:4px 0 10px">Left blank, they\'re skipped in your averages. Fill them so your ' + (days.length > 7 ? "month and year stay" : "week stays") + " honest:</p>" +
+    '<div class="ik-quick" style="margin:0"><button class="ik-btn soft" data-fill="fast" data-scope="span">I was fasting</button>' +
+    (av ? '<button class="ik-btn soft" data-fill="avg" data-scope="span">Fill with my average</button>' : "") + "</div>" +
+    (av ? '<p class="ik-small" style="margin:8px 0 0">Your average day comes from the ' + av.avgOf + " days you logged in the last 60. You can also fill one day at a time from Today.</p>" : '<p class="ik-small" style="margin:8px 0 0">Log at least 3 days to fill gaps with your average.</p>') + "</section>";
+  if (filled) h += '<p class="ik-small" style="margin:-4px 2px 14px">' + filled + " filled day" + (filled === 1 ? "" : "s") + ' in this view. <button class="ik-link" data-fill="clear" data-scope="span">Clear them</button></p>';
+  return h;
 }
 function ikLowRow(l) {
   var tip = IK_EDITION.hints[l.k] ? " " + IK_EDITION.hints[l.k] : "";
@@ -7446,7 +8348,7 @@ function ikChartSvg(spec, id) {
   var every = n > 14 ? Math.ceil(n / 10) : 1;
   var axis = '<div aria-hidden="true" style="display:grid;grid-template-columns:repeat(' + n + ',minmax(0,1fr));font-size:12px;color:var(--ik-ink2);text-align:center;width:100%;margin-top:4px">' +
     spec.buckets.map(function (b, i) { return "<span>" + (i % every === 0 ? ikEsc(b.label) : "") + "</span>"; }).join("") + "</div>" +
-    (spec.target ? '<div class="ik-small" style="width:100%">Dashed line: your target, ' + ikNum(spec.target, 0) + " " + spec.series[0].unit + "</div>" : "");
+    (spec.target ? '<div class="ik-small" style="width:100%">Dashed line: ' + ikEsc(spec.targetLabel || "your target, " + ikNum(spec.target, 0) + " " + spec.series[0].unit) + "</div>" : "");
   // hover targets: one invisible column per bucket, bigger than the mark
   spec.buckets.forEach(function (b, i) { out += '<rect class="ik-hov" data-spec="' + id + '" data-i="' + i + '" x="' + (i * slot).toFixed(1) + '" y="0" width="' + slot.toFixed(1) + '" height="' + H + '" fill="transparent"/>'; });
   return '<svg class="ik-svg" viewBox="0 0 ' + W + " " + H + '" preserveAspectRatio="none" style="height:' + (id === "summary" ? 100 : 130) + 'px" role="img" aria-label="' + ikEsc(spec.series.map(function (s) { return s.label; }).join(", ") + " by " + (spec.buckets.length > 13 ? "day" : "period")) + '">' + out + "</svg>" + axis;
@@ -7498,9 +8400,10 @@ function ikTooltip(e) {
 /* The full-size view: the chart bigger, plus a table of every number. */
 function ikOpenChart(id) {
   var d = dd.getData(), spec = IK_SPECS[id], span = IK_UI.span, end = IK_UI.spanEnd || ikToday();
-  var series = ikDaySeries(d, ikSpanDays(span, end)), titles = { energy: "Energy", macros: "Protein, carbs, fat", fats: "Kinds of fat", vitmin: "Vitamins and minerals" };
+  var series = ikDaySeries(d, ikSpanDays(span, end)), titles = { energy: "Energy", macros: "Protein, carbs, fat", fats: "Kinds of fat", vitmin: "Vitamins and minerals", load: "Blood sugar load", feed: "Eating window" };
   var logged = series.filter(function (s) { return s.logged; }), n = Math.max(1, logged.length), body = "";
-  if (id === "energy" || id === "macros") {
+  if (id === "load" || id === "feed") body = ikExtraChartBody(d, series, span, id);
+  else if (id === "energy" || id === "macros") {
     var big = ikChartSvg(id === "energy" ? ikLineSpec(d, series, span, "kcal") : ikMacroSpec(d, series, span), id + "-big").replace('style="height:130px"', 'style="height:260px"');
     var bs = ikBucket(series, span), keys = id === "energy" ? ["kcal"] : ["protein", "carb", "fat", "fibre", "sugar"];
     body = big + (id === "macros" ? '<div class="ik-legend" style="margin-top:8px"><span><i style="background:var(--ik-protein)"></i>Protein</span><span><i style="background:var(--ik-carb)"></i>Carbs</span><span><i style="background:var(--ik-fat)"></i>Fat</span></div>' : "") +
@@ -7538,6 +8441,7 @@ function ikRenderAdvice(ctx) {
     h += '<h2 class="ik-h2">Over the last 30 days</h2><section class="ik-list">' + p30.low.slice(0, 4).map(function (l) {
       return '<div class="ik-adv"><div class="ik-row"><span>' + ikEsc(l.label) + '</span><span class="ik-low">' + Math.round(l.pct) + "%</span></div><p>Under target on " + l.under + " of " + l.logged + " days logged.</p></div>"; }).join("") + "</section>";
   }
+  h += ikHealthNotes(d);   // V3
   // how much should I have?
   var rec = ikRecommended(d), keys = ["kcal", "protein", "fibre", "vitD", "ca", "fe", "na"];
   if (ikHideKcal(d)) keys.shift();
@@ -7565,6 +8469,7 @@ function ikCheckIn(d, p) {
 
 /* ---------- drawing everything ---------- */
 function ikRender(ctx) {
+  IK_MEMO = {};
   if (!IK_UI.day) IK_UI.day = ikToday();
   var app = ctx.ui.$("ikApp"); if (!app) return;
   var openAll = document.getElementById("ikAllN"); if (openAll) IK_UI.openAll = openAll.open;
@@ -7668,14 +8573,25 @@ function ikPickPhoto(opts) {
 }
 function ikPhotoTotal() {
   var d = dd.getData(), kcal = 0;
-  IK_P.items.forEach(function (it) { kcal += ikItemNutrients(ikPhotoItemRef(it), d).v.kcal || 0; });
+  ikPhotoLogItems(IK_P, d).forEach(function (it) { kcal += ikItemNutrients(it, d).v.kcal || 0; });
   return kcal;
+}
+/* V4: the photo's items as they'll be logged, plus one line for cooking oil from the cooking methods. */
+function ikPhotoOilG(P, d) {
+  var g = 0;
+  P.items.forEach(function (it) { if (it.method && it.ref && ikCookable(it.ref)) g += ikOilGrams(d, it.method, it.g); });
+  return g;
+}
+function ikPhotoLogItems(P, d) {
+  var items = P.items.map(ikPhotoItemRef), o = ikOilItem(d, ikPhotoOilG(P, d));
+  if (o) items.push(o);
+  return items;
 }
 /* A photo item as a log item (estimates are counted through a temporary per-100 g profile). */
 function ikPhotoItemRef(it) {
-  if (it.recipe) return { ref: "__tmp", g: it.g, _per100: it.recipe.per100 };
-  if (it.ref) return { ref: it.ref, g: it.g };
-  return { ref: "__tmp", g: it.g, _per100: it.per100 };
+  if (it.recipe) return { ref: "__tmp", g: it.g, _per100: it.recipe.per100, name: it.name, _ings: it.recipe.ingredients };
+  if (it.ref) return { ref: it.ref, g: it.g, name: it.name };
+  return { ref: "__tmp", g: it.g, _per100: it.per100, name: it.name };
 }
 function ikConfLabel(c) { return c === "sure" ? "Sure" : c === "likely" ? "Likely" : "Rough guess"; }
 function ikPhotoPaint() {
@@ -7713,7 +8629,9 @@ function ikPhotoPaint() {
       '<button class="ik-btn wide" data-addlabel>Save it and add to ' + ikEsc(ikDayName(P.day).toLowerCase() === "today" ? "today" : ikDayName(P.day)) + "</button>" +
       '<p class="ik-small" style="text-align:center">Saved under My foods, so next time you can add it by typing its name.</p>';
   } else if (P.stage === "results") {
+    if (P.busy) h += '<div class="ik-warn soft">📸 Lots going on in this image. For the best numbers, try one plate at a time.</div>';   // V4
     h += '<h2 class="ik-h2" style="margin-top:4px">Here\'s what I see</h2><div class="ik-results">' + P.items.map(function (it, i) { return ikPhotoItemHtml(it, i, d, name); }).join("") + "</div>";
+    h += ikPhotoFlagsHtml(P, d);   // V3: balance and flags before Add
     h += '<div class="ik-row" style="margin:0 0 10px"><button class="ik-link" data-additem>＋ Something I missed</button><span class="ik-grow"></span><button class="ik-link" data-again>Look again</button></div>';
     var waiting = P.items.some(function (it) { return it.ask && !it.answered; });
     h += '<button class="ik-btn wide" data-addall' + (P.items.length ? "" : " disabled") + ">Add to " + ikEsc(ikDayName(P.day).toLowerCase() === "today" ? "today" : ikDayName(P.day)) + (hide ? "" : ' · about <span data-total>' + ikNum(ikPhotoTotal(), 0) + "</span> kcal") + "</button>" +
@@ -7731,6 +8649,12 @@ function ikPhotoItemHtml(it, i, d, name) {
     '<button class="ik-x" data-del="' + i + '" aria-label="Remove ' + ikEsc(it.name) + '">✕</button></div>' +
     '<label class="ik-grams"><span data-about="' + i + '">' + ikEsc(ikAbout(food, it.g) || (r ? r.label : est ? "Not in the food table: " + name + "'s estimate" : "")) + '</span><input type="range" min="5" max="' + max + '" step="5" value="' + Math.round(it.g) + '" data-r="' + i + '" aria-label="Amount of ' + ikEsc(it.name) + ' in grams"></label>' +
     (r && r.label !== it.name ? '<div class="ik-small">Counted as: ' + ikEsc(r.label) + ' · <button class="ik-link" data-swap="' + i + '">Not right?</button></div>' : '<div class="ik-small"><button class="ik-link" data-swap="' + i + '" style="padding-left:0">Pick the right food</button></div>');
+  if (it.ref && ikCookable(it.ref)) {   // V4: cooking method changes the numbers (oil)
+    var og = ikOilGrams(d, it.method, it.g), oil = IK_OILS.filter(function (o) { return o.k === ikCook(d).oil; })[0];
+    h += '<div class="ik-row" style="gap:8px;align-items:center"><select class="ik-input" data-method="' + i + '" style="width:auto;min-height:36px;padding:4px 30px 4px 10px" aria-label="How the ' + ikEsc(it.name) + ' was cooked">' +
+      '<option value="">Cooked how? Not sure</option>' + IK_METHODS.map(function (m) { return '<option value="' + m.k + '"' + (it.method === m.k ? " selected" : "") + ">" + m.label + "</option>"; }).join("") + "</select>" +
+      '<span class="ik-small" data-oil="' + i + '">' + (og >= 0.5 && oil && oil.ref ? "+ about " + Math.round(og) + " g " + ikEsc(oil.label.toLowerCase()) : "") + "</span></div>";
+  }
   if (it.recipe) h += '<div class="ik-small">Made with ' + ikEsc(it.recipe.ingredients.map(function (x) { var rr = ikResolve(x.ref, d); return (x.name || (rr ? rr.label : "?")).toLowerCase() + " " + x.g + " g"; }).join(", ")) + "</div>" +
     '<label class="ik-small"><input type="checkbox" data-save="' + i + '"' + (it.saveRecipe !== false ? " checked" : "") + '> Save as my recipe: </label><input class="ik-input" data-rname="' + i + '" value="' + ikEsc(it.recipe.name) + '" style="min-height:38px;padding:6px 10px">';
   if (it.ask && !it.answered) {
@@ -7750,18 +8674,18 @@ function ikMicOK() { return location.protocol !== "file:" && !!(window.SpeechRec
 /* Dictation into a box: speech to text, using the browser. The helper never talks back. */
 /* Only ever started by a tap on 🎤. Stopped and forgotten when the app goes to the background (2026-10-13). */
 var IK_REC = null;
-function ikDictateDrop() { var r = IK_REC; IK_REC = null; if (r) { try { r.abort(); } catch (e) {} } }
+/* V4: stopping (or sending) drops it completely, so late words can't land in the box. */
+function ikDictateDrop() { var r = IK_REC; IK_REC = null; if (r) { try { r.onresult = null; r.abort(); } catch (e) {} if (r._btn) { r._btn.textContent = "🎤"; r._btn.setAttribute("aria-label", "Talk instead of typing"); } } }
 document.addEventListener("visibilitychange", function () { if (document.hidden) ikDictateDrop(); });
 window.addEventListener("pagehide", ikDictateDrop);
 function ikDictate(input, btn) {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR || !input) return;
   ikDictateDrop();
-  var rec = IK_REC = new SR(), base = input.value; rec.lang = navigator.language || "en-CA"; rec.interimResults = true; rec.continuous = false;
+  var rec = IK_REC = new SR(), base = input.value; rec._btn = btn; rec.lang = navigator.language || "en-CA"; rec.interimResults = true; rec.continuous = false;
   btn.textContent = "■"; btn.setAttribute("aria-label", "Stop");
-  rec.onresult = function (e) { var t = ""; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; input.value = (base ? base + " " : "") + t; };
+  rec.onresult = function (e) { if (IK_REC !== rec) return; var t = ""; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; input.value = (base ? base + " " : "") + t; };
   rec.onend = function () { if (IK_REC === rec) IK_REC = null; btn.textContent = "🎤"; btn.setAttribute("aria-label", "Talk instead of typing"); };
   rec.onerror = function () { rec.onend(); };
-  btn.onclick = function () { try { rec.stop(); } catch (e) {} };
   try { rec.start(); } catch (e) { rec.onend(); }
 }
 function ikPhotoWire() {
@@ -7777,6 +8701,7 @@ function ikPhotoWire() {
   var stop = q("[data-stop]"); if (stop) stop.addEventListener("click", function () { dd.ai.stop(); });
   all("[data-g]").forEach(function (inp) { inp.addEventListener("input", function () { ikPhotoSetG(+inp.getAttribute("data-g"), +inp.value, "num"); }); });
   all("[data-r]").forEach(function (inp) { inp.addEventListener("input", function () { ikPhotoSetG(+inp.getAttribute("data-r"), +inp.value, "range"); }); });
+  all("[data-method]").forEach(function (sel) { sel.addEventListener("change", function () { var it = P.items[+sel.getAttribute("data-method")]; if (it) { it.method = sel.value || null; ikPhotoPaint(); } }); });
   all("[data-del]").forEach(function (b) { b.addEventListener("click", function () { P.items.splice(+b.getAttribute("data-del"), 1); ikPhotoPaint(); }); });
   all("[data-swap]").forEach(function (b) { b.addEventListener("click", function () {
     var i = +b.getAttribute("data-swap");
@@ -7793,7 +8718,11 @@ function ikPhotoWire() {
   }); });
   all("[data-dsend]").forEach(function (b) { b.addEventListener("click", function () { var i = +b.getAttribute("data-dsend"), inp = q('[data-desc="' + i + '"]'); ikDescribe(i, inp ? inp.value : ""); }); });
   all("[data-desc]").forEach(function (inp) { inp.addEventListener("keydown", function (e) { if (e.key === "Enter") ikDescribe(+inp.getAttribute("data-desc"), inp.value); }); });
-  all("[data-mic]").forEach(function (b) { b.addEventListener("click", function () { ikDictate(q('[data-desc="' + b.getAttribute("data-mic") + '"]'), b); }); });
+  all("[data-mic]").forEach(function (b) { b.addEventListener("click", function (e) {
+    if (!e.isTrusted) return;   // V4: only a real tap starts the microphone
+    if (IK_REC && IK_REC._btn === b) { ikDictateDrop(); return; }   // second tap: stop
+    ikDictate(q('[data-desc="' + b.getAttribute("data-mic") + '"]'), b);
+  }); });
   all("[data-save]").forEach(function (c) { c.addEventListener("change", function () { P.items[+c.getAttribute("data-save")].saveRecipe = c.checked; }); });
   all("[data-rname]").forEach(function (c) { c.addEventListener("input", function () { var it = P.items[+c.getAttribute("data-rname")]; if (it.recipe) it.recipe.name = c.value.slice(0, 60); }); });
   var addAll = q("[data-addall]"); if (addAll) addAll.addEventListener("click", ikPhotoAdd);
@@ -7809,6 +8738,8 @@ function ikPhotoSetG(i, g, from) {
   var r = it.ref ? ikResolve(it.ref, dd.getData()) : null;
   if (ab && r && r.food) ab.textContent = ikAbout(r.food, g) || r.label;
   if (tot) tot.textContent = ikNum(ikPhotoTotal(), 0);
+  var ol = el.querySelector('[data-oil="' + i + '"]'), dd0 = dd.getData(), og = ikOilGrams(dd0, it.method, g), oo = IK_OILS.filter(function (o) { return o.k === ikCook(dd0).oil; })[0];
+  if (ol) ol.textContent = og >= 0.5 && oo && oo.ref ? "+ about " + Math.round(og) + " g " + oo.label.toLowerCase() : "";
 }
 /* One request: the AI names each food, guesses the grams and picks the table id. Code does the rest. */
 function ikPhotoLook() {
@@ -7826,7 +8757,9 @@ function ikPhotoLook() {
     "(drinks: grams roughly equal millilitres), how sure you are, and the closest id from the FOOD LIST below (the exact id text before the colon, or 'none' if nothing fits). " +
     "Prefer the person's own recipes (r:...) and foods (c:...) when they match. Mark mixed=true for a sauce, stew, casserole, smoothie or mixed dish whose ingredients you can't see; still give your closest id and per-100 g estimates for it. " +
     "When the id is 'none', also give your estimates per 100 g (kcal, protein, fat, carb, fibre, sugar, sodium). x and y are where the food's centre is in the photo, from 0 to 1. " +
-    "Do not report the plate, cutlery, the size reference or the table. If the photo is a Nutrition Facts label instead of food, set is_label=true and report nothing else.\n\n" + sizeSay +
+    "Do not report the plate, cutlery, the size reference or the table. If the photo is a Nutrition Facts label instead of food, set is_label=true and report nothing else. " +
+    "For each cooked food, say how it was cooked in method (raw, boiled, grilled, baked, panfried, deepfried), and pick the table id that matches that cooking (egg_fried for a fried egg, fries for deep-fried potatoes); use 'none' for drinks, packaged foods and mixed dishes. " +
+    "Give your per-100 g estimates including any cooking fat. Set plates to how many separate plates, bowls or meals are in the photo. If the photo is very busy, report only the 10 biggest foods.\n\n" + sizeSay +
     "\n\nFOOD LIST (id: name):\n" + ikFoodListForAI(d);
   var num = { type: "number" };
   var tool = isLabel ? { name: "report_label", description: "Report the numbers on the Nutrition Facts label, for one serving.",
@@ -7840,8 +8773,10 @@ function ikPhotoLook() {
       params: { foods: { type: "array", description: "One entry per food or drink seen", items: { type: "object", properties: {
           name: { type: "string" }, match: { type: "string", description: "Closest id from the FOOD LIST, or 'none'" }, grams: num,
           confidence: { type: "string", enum: ["sure", "likely", "guess"] }, mixed: { type: "boolean" }, drink: { type: "boolean" }, x: num, y: num,
-          kcal_per_100g: num, protein_per_100g: num, fat_per_100g: num, carb_per_100g: num, fibre_per_100g: num, sugar_per_100g: num, sodium_mg_per_100g: num },
+          kcal_per_100g: num, protein_per_100g: num, fat_per_100g: num, carb_per_100g: num, fibre_per_100g: num, sugar_per_100g: num, sodium_mg_per_100g: num,
+          method: { type: "string", enum: IK_METHOD_KEYS.concat(["none"]) } },
           required: ["name", "match", "grams", "confidence"] } },
+        plates: { type: "integer", description: "How many separate plates, bowls or meals are in the photo", optional: true },
         is_label: { type: "boolean", description: "true when the photo is a Nutrition Facts label", optional: true } },
       run: function (args) { got = args; return { ok: true }; } };
   /* Hydration (Oran, 2026-10-13): a photo of a glass, mug or bottle. The AI judges how much liquid is in it. */
@@ -7854,7 +8789,9 @@ function ikPhotoLook() {
       if (!IK_P || IK_P !== P) return;
       if (!r.ok || !got) {
         P.stage = "error";
-        P.err = r.ok ? { title: "I couldn't make out the food.", help: "Try a photo from a little higher up, in good light, or add it by typing." } : { title: r.title, help: r.help };
+        P.err = r.ok ? { title: "Lots going on in this image.", help: "Try one plate at a time, from a little higher up, in good light. Or add it by typing." } : { title: r.title, help: r.help };
+        /* V4: a busy photo usually ends in a timeout or an unreadable answer. Say what to do instead of a bare error. */
+        if (!r.ok && (r.type === "timeout" || r.type === "unexpected")) P.err = { title: "Lots going on in this image.", help: "Try one plate at a time, or add it by typing." };
         if (r.stopped) { P.stage = "ready"; P.err = null; }
         ikPhotoPaint(); return;
       }
@@ -7863,9 +8800,11 @@ function ikPhotoLook() {
       P.items = (got.foods || []).filter(function (f) { return f && f.name; }).slice(0, 12).map(function (f) {
         var ref = ikRefFor(f.match, d), g = Math.max(1, Math.min(3000, Number(f.grams) || 100)), mixed = !!f.mixed && !(ref && /^r:/.test(ref));
         return { name: String(f.name).slice(0, 60), ref: mixed ? null : ref, tableRef: ref, g: g, conf: /^(sure|likely|guess)$/.test(f.confidence) ? f.confidence : "likely", ask: mixed,
+                 method: IK_METHOD_KEYS.indexOf(f.method) >= 0 ? f.method : null,
                  per100: ikPer100FromEstimate(f), drink: P.mode === "drink" || !!f.drink || (ref && ikResolve(ref, d) && ikResolve(ref, d).kind === "drink"), x: Number(f.x), y: Number(f.y) };
       }).map(function (it) { if (!isFinite(it.x)) it.x = null; if (!isFinite(it.y)) it.y = null; if (!it.ref && !it.ask && it.tableRef) it.ref = it.tableRef; return it; });
       P.stage = "results";
+      P.busy = (Number(got.plates) || 1) > 1 || (got.foods || []).length > 8;   // V4
       if (!P.items.length) { P.stage = "error"; P.err = { title: "I couldn't see any food in that photo.", help: "Try again with the food filling more of the picture." }; }
       ikPhotoPaint();
     });
@@ -7874,6 +8813,7 @@ function ikPhotoLook() {
 function ikDescribe(i, words) {
   var P = IK_P, it = P && P.items[i], d = dd.getData(); words = String(words || "").trim();
   if (!it || !words || it.busy) return;
+  ikDictateDrop();   // V4: the words are sent; stop listening so the box clears
   if (!(dd.ai && dd.ai.hasCode())) { dd.setup.needAI(); return; }
   it.busy = true; ikPhotoPaint();
   var got = null;
@@ -7906,12 +8846,13 @@ function ikPhotoAdd() {
     } else if (it.recipe) {
       var cid0 = ctx.ui.uid("c"); newFoods.push({ id: cid0, name: it.recipe.name || it.name, per100: it.recipe.per100, src: "described", kind: "food" });
       items.push({ ref: "c:" + cid0, g: Math.round(it.g), name: it.name });
-    } else if (it.ref) items.push({ ref: it.ref, g: Math.round(it.g), name: it.name });
+    } else if (it.ref) items.push(it.method && ikCookable(it.ref) ? { ref: it.ref, g: Math.round(it.g), name: it.name, method: it.method } : { ref: it.ref, g: Math.round(it.g), name: it.name });
     else {
       var cid = ctx.ui.uid("c"); newFoods.push({ id: cid, name: it.name, per100: it.per100, est: true, src: "photo", kind: it.drink ? "drink" : "food" });
       items.push({ ref: "c:" + cid, g: Math.round(it.g), name: it.name, est: true });
     }
   });
+  var oilItem = ikOilItem(dd.getData(), ikPhotoOilG(P, dd.getData())); if (oilItem) items.push(oilItem);   // V4
   var allDrinks = P.items.every(function (it) { return it.drink; });
   var entry = { id: ctx.ui.uid("e"), day: P.day, time: P.time, part: P.part, kind: allDrinks ? "drink" : "food", name: "", items: items, src: "photo" };
   ctx.update(function (d) {
@@ -7923,7 +8864,8 @@ function ikPhotoAdd() {
   var kcal = ikEntryKcal(entry, dd.getData());
   dd.ui.closeSheet();
   IK_UI.view = "today"; IK_UI.day = entry.day; ikRender(ikCtx());
-  dd.ui.toast("Added " + ikEntryName(entry, dd.getData()) + (ikHideKcal(dd.getData()) ? "." : " · " + ikNum(kcal, 0) + " kcal."), 3500);
+  var fl = ikEntryFlags(entry, dd.getData()).filter(function (f) { return f.lvl === "warn"; })[0];
+  dd.ui.toast("Added " + ikEntryName(entry, dd.getData()) + (ikHideKcal(dd.getData()) ? "." : " · " + ikNum(kcal, 0) + " kcal.") + (fl ? " ⚠ " + fl.short + "." : ""), fl ? 5000 : 3500);
 }
 function ikLabelGot(a) {
   var P = IK_P;
@@ -7996,6 +8938,7 @@ function ikOpenAdd(start) {
       (servings ? '<label class="ik-label">Servings</label><input class="ik-input" type="number" inputmode="decimal" min="0.25" step="0.25" value="' + (h.n || 1) + '" data-n style="max-width:140px">' :
         '<label class="ik-label">How much (grams)</label><div class="ik-row"><input class="ik-input" type="number" inputmode="decimal" min="1" step="5" value="' + Math.round(g0) + '" data-gr style="max-width:140px"><span class="ik-small" data-ab></span></div>' +
         (ms.length ? '<div class="ik-chips" style="margin-top:8px">' + ms.map(function (m, i) { return '<button class="ik-chip" data-m="' + i + '">' + ikEsc(ikMeasureLabel(m[0])) + "</button>"; }).join("") + "</div>" : "")) +
+      (ikCookable(h.ref) && !servings ? ikMethodSelect("data-meth", "") : "") +
       '<div class="ik-two"><div><label class="ik-label">Time</label><input class="ik-input" type="time" value="' + now + '" data-t></div><div><label class="ik-label">Kind</label><select class="ik-input" data-k>' +
       ["food", "drink", "supplement"].map(function (k) { var def = r.kind === "supplement" || r.type === "supp" ? "supplement" : r.kind === "drink" ? "drink" : "food"; return "<option" + (k === def ? " selected" : "") + ">" + k + "</option>"; }).join("") + "</select></div></div>" +
       '<button class="ik-btn wide" data-add style="margin-top:12px">Add to ' + ikEsc(day === ikToday() ? "today" : ikDayName(day)) + "</button></div>";
@@ -8007,8 +8950,10 @@ function ikOpenAdd(start) {
       var t = amt.querySelector("[data-t]").value || now, kind = amt.querySelector("[data-k]").value;
       var item = { ref: h.ref, name: r.label };
       if (servings) item.n = Math.max(0.25, Number(amt.querySelector("[data-n]").value) || 1); else item.g = Math.max(1, Number(gr.value) || 100);
-      var e = { id: dd.ui.uid("e"), day: day, time: t, part: ikPartOf(t), kind: kind, name: "", items: [item], src: "typed" };
-      dd.update(function (dt) { ikTouch(dt, [item]); dt.entries.push(e); });
+      var items = [item], meth = amt.querySelector("[data-meth]");
+      if (meth && meth.value && item.g) { item.method = meth.value; var oi = ikOilItem(d, ikOilGrams(d, meth.value, item.g)); if (oi) items.push(oi); }   // V4
+      var e = { id: dd.ui.uid("e"), day: day, time: t, part: ikPartOf(t), kind: kind, name: "", items: items, src: "typed" };
+      dd.update(function (dt) { ikTouch(dt, items); dt.entries.push(e); });
       dd.ui.toast("Added " + r.label + ".");
       q.value = ""; list(); q.focus();
     });
@@ -8025,6 +8970,69 @@ function ikForgotMeal() {
 function ikTellHelper() {
   if (!dd.helper || !dd.helper.enabled()) return;
   dd.helper.say("Tell me what you had, the way you'd say it: \"two eggs and a slice of rye toast with butter\" or \"a large coffee with cream\". I'll add it, and you can undo anything I change.", { chips: ["What should I eat to get more protein?"] });
+}
+
+/* ---------- V4: Add again — recent and usual foods, one tap (Oran, 2026-10-13) ----------
+   Every past entry is grouped by what was in it and how much (so "250 mL water" and "500 mL water" are separate).
+   Recent: newest first. Most often: how many times in the last 60 days. Tapping adds a copy at the current time. */
+function ikEntrySig(e) {
+  return (e.kind || "food") + "|" + (e.items || []).map(function (i) { return i.ref + "@" + (i.n != null ? "n" + i.n : Math.round(i.g || 0)); }).sort().join(",");
+}
+function ikUsual(d, mode) {
+  return ikMemo("usual:" + mode, function () {
+    var by = {}, from = ikAddDays(ikToday(), -60), list = [];
+    (d.entries || []).forEach(function (e) {
+      if (!(e.items || []).length || !(e.items || []).every(function (i) { return ikResolve(i.ref, d); })) return;   // skip ones whose food was deleted
+      var sig = ikEntrySig(e), at = e.day + " " + (e.time || "");
+      var u = by[sig] || (by[sig] = { sig: sig, e: e, count: 0, last: "" });
+      if (e.day >= from) u.count++;
+      if (at > u.last) { u.last = at; u.e = e; }
+    });
+    Object.keys(by).forEach(function (k) { var u = by[k]; u.name = ikEntryName(u.e, d); list.push(u); });
+    if (mode === "common") return list.filter(function (u) { return u.count >= 2; }).sort(function (a, b) { return b.count - a.count || (b.last > a.last ? 1 : -1); }).slice(0, 20);
+    return list.sort(function (a, b) { return b.last > a.last ? 1 : -1; }).slice(0, 20);
+  });
+}
+function ikUsualAmount(u, d) {
+  return (u.e.items || []).filter(function (i) { return !/for cooking$/.test(i.name || ""); }).map(function (i) {
+    var r = ikResolve(i.ref, d), drink = u.e.kind === "drink" || (r && r.kind === "drink");
+    return i.n != null ? i.n + " serv." : Math.round(i.g || 0) + (drink ? " mL" : " g");
+  }).join(" + ");
+}
+function ikAddAgain(sig) {
+  var d = dd.getData(), u = ikUsual(d, "recent").concat(ikUsual(d, "common")).filter(function (x) { return x.sig === sig; })[0]; if (!u) return;
+  var day = IK_UI.day || ikToday(), t = day === ikToday() ? ikNowTime() : (u.e.time || "12:00"), src = u.e;
+  var e = { id: dd.ui.uid("e"), day: day, time: t, part: ikPartOf(t), kind: src.kind || "food", name: src.name || "",
+            items: JSON.parse(JSON.stringify(src.items)), src: "again" };
+  dd.update(function (dt) { ikTouch(dt, e.items); dt.entries.push(e); });
+  var fl = ikEntryFlags(e, dd.getData()).filter(function (f) { return f.lvl === "warn"; })[0];
+  dd.ui.toast("Added " + ikEntryName(e, dd.getData()) + (day === ikToday() ? "" : " to " + ikDayName(day)) + "." + (fl ? " ⚠ " + fl.short + "." : ""), fl ? 5000 : 2500);
+}
+function ikOpenAgain() {
+  var tab = ikUsual(dd.getData(), "common").length ? "common" : "recent";
+  var sh = dd.ui.sheet("", { sticky: false }); sh.classList.add("ik-sheet");
+  function paint() {
+    var d = dd.getData(), list = ikUsual(d, tab), hide = ikHideKcal(d), day = IK_UI.day || ikToday();
+    sh.innerHTML = '<div class="ik-sheettop"><h2>Add again</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+      '<div class="ik-seg" role="tablist" style="grid-template-columns:repeat(2,minmax(0,1fr));margin:0 0 12px">' +
+        '<button role="tab" data-tab="common" aria-selected="' + (tab === "common") + '">Most often</button><button role="tab" data-tab="recent" aria-selected="' + (tab === "recent") + '">Recent</button></div>' +
+      (list.length ? '<div class="ik-hits" style="max-height:60vh">' + list.map(function (u) {
+        var icon = u.e.kind === "drink" ? "drink" : u.e.kind === "supplement" ? "supplement" : u.e.part;
+        var kcal = ikEntryKcalM(u.e, d);
+        return '<button class="ik-hit" data-sig="' + ikEsc(u.sig) + '"><span class="ik-ico ' + icon + '" aria-hidden="true">' + (IK_PART_ICON[icon] || "🍽️") + '</span>' +
+          '<span class="ik-grow"><b>' + ikEsc(u.name) + "</b><br><small>" + ikEsc(ikUsualAmount(u, d)) + (hide ? "" : " · " + ikNum(kcal, 0) + " kcal") +
+          (tab === "common" ? " · " + u.count + "× lately" : " · " + ikEsc(ikShortDate(u.e.day))) + '</small></span><span class="ik-round" aria-hidden="true">＋</span></button>';
+      }).join("") + "</div>"
+        : '<div class="ik-empty">' + (tab === "common" ? "Things you have more than once show up here." : "Nothing logged yet.") + "</div>") +
+      '<p class="ik-small">Tap to add it to ' + ikEsc(day === ikToday() ? "today, at the time now" : ikDayName(day)) + '. The list stays open, so you can add a few. To change the amount after, tap it in your food list.</p>';
+    sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
+    sh.querySelectorAll("[data-tab]").forEach(function (b) { b.addEventListener("click", function () { tab = b.getAttribute("data-tab"); paint(); }); });
+    sh.querySelectorAll("[data-sig]").forEach(function (b) { b.addEventListener("click", function () {
+      ikAddAgain(b.getAttribute("data-sig"));
+      b.style.background = "var(--ik-fibre-soft)"; setTimeout(function () { if (document.body.contains(b)) b.style.background = ""; }, 600);
+    }); });
+  }
+  paint();
 }
 
 /* ---------- supplements ---------- */
@@ -8087,7 +9095,7 @@ function ikOpenEntry(id) {
       ["morning", "afternoon", "evening"].map(function (p) { return '<option value="' + p + '"' + (work.part === p ? " selected" : "") + ">" + IK_PARTS[p] + "</option>"; }).join("") + "</select></div></div>" +
       '<label class="ik-label">Note (optional)</label><input class="ik-input" data-note value="' + ikEsc(work.note || "") + '" placeholder="e.g. same sauce as yesterday">' +
       '<div class="ik-card" style="margin-top:12px"><b>' + (hide ? "" : ikNum(t.v.kcal, 0) + " kcal · ") + "protein " + ikNum(t.v.protein, 0) + " g · fibre " + ikNum(t.v.fibre, 0) + " g</b>" +
-      (t.est ? '<p class="ik-small" style="margin:6px 0 0">"Estimated" means the food isn\'t in the food table, so ' + ikEsc(dd.helper ? dd.helper.name() : "DigiBot") + "'s guess is used. Pick the right food from the table, or snap the label, for exact numbers.</p>" : "") + "</div>" +
+      (t.est ? '<p class="ik-small" style="margin:6px 0 0">"Estimated" means the food isn\'t in the food table, so ' + ikEsc(dd.helper ? dd.helper.name() : "DigiBot") + "'s guess is used. Pick the right food from the table, or snap the label, for exact numbers.</p>" : "") + "</div>" + ikEntryBalanceHtml(work, d) +
       '<button class="ik-btn wide" data-save>Save and close</button><div class="ik-quick" style="margin-top:10px;justify-content:space-between">' +
       '<button class="ik-btn soft" data-askbot>💬 Ask ' + ikEsc(dd.helper ? dd.helper.name() : "DigiBot") + ' to change this</button>' +
       (work.items.length > 1 ? '<button class="ik-btn soft" data-recipe>🍲 Save as my recipe</button>' : "<span></span>") + '<button class="ik-btn soft" data-remove style="color:var(--ik-high)">Remove this</button></div>';
@@ -8171,7 +9179,7 @@ function ikOpenProfile() {
   var sh = dd.ui.sheet("", { sticky: true }); sh.classList.add("ik-sheet");
   function ft(cm) { var inch = cm / 2.54; return { f: Math.floor(inch / 12), i: Math.round(inch % 12) }; }
   function paint() {
-    var tmp = { settings: { profile: p }, targets: mine }, rec = ikRecommended(tmp), h = ft(p.heightCm || 170);
+    var tmp = { settings: Object.assign({}, d.settings, { profile: p }), targets: mine }, rec = ikRecommended(tmp), h = ft(p.heightCm || 170);
     var html = '<div class="ik-sheettop"><h2>My profile &amp; targets</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
       '<div class="ik-card"><p class="ik-small" style="margin:0 0 6px">Used only to suggest your targets. It stays on your devices.</p>' +
       '<div class="ik-two"><div><label class="ik-label">Age</label><input class="ik-input" type="number" min="18" max="110" data-f="age" value="' + (p.age || "") + '"></div>' +
@@ -8188,7 +9196,7 @@ function ikOpenProfile() {
     html += '<h2 class="ik-h2">Targets</h2><p class="ik-small">Recommended amounts first. Type your own to change one; clear the box to go back.</p><div class="ik-card">' +
       '<div class="ik-tgt" style="font-weight:700;font-size:13px"><span>Nutrient</span><span class="ik-rec">Recommended</span><span style="text-align:right">Mine</span></div>' +
       IK_TARGETABLE.map(function (k) {
-        var nt = IK_NBY[k] || { label: k === "drinks" ? "Drinks (water from drinks)" : k, unit: k === "drinks" ? "mL" : "g", dp: 0, kind: "target" };
+        var nt = ikNt(k);
         if (k === "kcal" && s.hideCalories) return "";
         var r = rec[k]; if (!r) return "";
         var warn = mine[k] ? ikTargetWarning(tmp, k, mine[k]) : "";
@@ -8257,6 +9265,8 @@ function ikOpenAbout() {
     "<p><b>" + ikEsc(name) + " sees, code counts.</b> When you snap a photo, Google's AI names each food and guesses how much there is. Every nutrient number is then worked out by this program from a food table, never made up by the AI.</p>" +
     "<p><b>The food table</b> is a selection of " + IK_FOODLIST.length + " common foods from the " + ikEsc(IK_EDITION.source) + ". " + ikEsc(IK_EDITION.sourceNote) + "</p>" +
     '<p><b>"Not measured"</b> means the table has no value for that nutrient in that food, so it isn\'t counted as zero. <b>"Estimated"</b> marks a food that isn\'t in the table, where the AI\'s guess is used. Snap the Nutrition Facts label for exact numbers.</p>' +
+    "<p><b>How you cook.</b> Food tables count home cooking plain. Salt is added to plain vegetables, meat, grains and beans from your How I cook settings, and cooking oil is added as its own line when you say a food was pan-fried, roasted, grilled or deep-fried.</p>" +
+    "<p><b>Days with nothing logged</b> are skipped in averages, unless you mark them as fasting (they count as zero) or fill them with your average day.</p>" +
     "<p><b>Your targets</b> start from good data: energy by the Mifflin-St Jeor equation, vitamins and minerals by the Dietary Reference Intakes that Canada and the US share. You can change any of them.</p>" +
     "<p><b>Photos are never saved.</b> A photo goes to Google with that one request (on the free plan Google may use it to improve its products), then it's gone. Only the foods, grams and numbers are kept, on your devices.</p>" +
     "<p><b>For adults (18 and over).</b> Intake is a reference, not medical advice. If you have a health condition, are pregnant, or are making big changes to how you eat, talk to your doctor or a registered dietitian.</p></div>");
@@ -8313,14 +9323,15 @@ function ikValid(d) {
   if (!d.targets || typeof d.targets !== "object" || Array.isArray(d.targets)) return false;
   var idList = function (a, check) { return Array.isArray(a) && a.every(function (x) { return x && typeof x === "object" && typeof x.id === "string" && (!check || check(x)); }); };
   return idList(d.entries, function (e) { return typeof e.day === "string" && /^\d{4}-\d\d-\d\d$/.test(e.day) && Array.isArray(e.items) && e.items.every(function (i) { return i && typeof i.ref === "string"; }); }) &&
-    idList(d.recipes, function (r) { return typeof r.name === "string"; }) && idList(d.customFoods, function (c) { return typeof c.name === "string"; });
+    idList(d.recipes, function (r) { return typeof r.name === "string"; }) && idList(d.customFoods, function (c) { return typeof c.name === "string"; }) &&
+    (d.dayFills == null || idList(d.dayFills, function (f) { return typeof f.day === "string" && /^\d{4}-\d\d-\d\d$/.test(f.day); }));   // V4
 }
 
 const DD_PROGRAM = {
   id: "intake",          // working name: may change until the first sale, never after (it names the saved data)
   name: "Intake",
   tagline: "Snap your food. See everything you take in.",
-  version: "0.2.0",
+  version: "0.4.0",
   schemaVersion: 1,
   brandPlace: "bar",     // 2026-10-13: no banner card on the page; tagline and 🎨 live in the top bar
   accent: "#ff2d55",
@@ -8335,11 +9346,14 @@ const DD_PROGRAM = {
     { id: "drink", icon: "🥤", label: "Snap a drink", note: "How much is in the glass, for your drinks today", run: function () { ikPickPhoto({ drink: true }); } },
     { id: "label", icon: "🏷️", label: "Snap a Nutrition Facts label", note: "Exact numbers for packaged foods", run: function () { ikPickPhoto({ label: true }); } },
     { id: "profile", icon: "🎯", label: "My profile & targets", note: function () { return ikProfileReady((dd.getData().settings || {}).profile) ? "Recommended amounts, or your own" : "Not set yet: tap to make targets yours"; }, run: function () { ikOpenProfile(); } },
+    { id: "again", icon: "⚡", label: "Add again", note: "Recent and usual foods and drinks, one tap", run: function () { ikOpenAgain(); } },
+    { id: "cooking", icon: "🧂", label: "How I cook", note: "Salt and cooking oil, for closer sodium and fat numbers", run: function () { ikOpenCooking(); } },
+    { id: "gauges", icon: "🎛️", label: "Home screen & health", note: "Gauges, fasting, health conditions, medicines", run: function () { ikOpenGauges(); } },
     { id: "recipes", icon: "🍲", label: "My recipes & foods", note: "Saved sauces, dishes and labels", run: function () { ikOpenRecipes(); } },
     { id: "about", icon: "📖", label: "About the numbers", note: "Where they come from · not medical advice", run: function () { ikOpenAbout(); } }
   ],
 
-  emptyData: function () { return { settings: { profile: {}, units: "metric", hideCalories: false, plateCm: 26 }, targets: {}, entries: [], recipes: [], customFoods: [] }; },
+  emptyData: function () { return { settings: { profile: {}, units: "metric", hideCalories: false, plateCm: 26 }, targets: {}, entries: [], recipes: [], customFoods: [], dayFills: [] }; },
   exampleData: function () { return ikExample(); },
   validateData: function (d) { return ikValid(d); },
   migrate: function (d) {
@@ -8347,7 +9361,7 @@ const DD_PROGRAM = {
     if (d && typeof d === "object") {
       if (d.settings && typeof d.settings === "object") out.settings = Object.assign(out.settings, d.settings);
       if (d.targets && typeof d.targets === "object") out.targets = d.targets;
-      ["entries", "recipes", "customFoods"].forEach(function (k) { if (Array.isArray(d[k])) out[k] = d[k].filter(function (x) { return x && typeof x.id === "string"; }); });
+      ["entries", "recipes", "customFoods", "dayFills"].forEach(function (k) { if (Array.isArray(d[k])) out[k] = d[k].filter(function (x) { return x && typeof x.id === "string"; }); });
       out.entries = out.entries.filter(function (e) { return typeof e.day === "string" && Array.isArray(e.items); });
       if (d.brand) out.brand = d.brand;
     }
@@ -8386,9 +9400,17 @@ const DD_PROGRAM = {
     "To log food the person describes, call log_food with ids from the FOOD LIST below and your best gram estimate (use the measures: 1 cup = 250 mL). For something not in the list, pass its name with your per-100 g estimates: it's saved and marked 'estimated'. " +
     "FORGOTTEN OR EARLIER MEALS: when the person tells you about food they had earlier, or says they forgot to log something, and hasn't said when, first ask ONE short question: 'About what time did you have it?' (and which day if it might not be today). " +
     "When they answer, call log_food with that time (24-hour) and day, then confirm in one sentence with the time. If they already said the time ('for lunch around noon'), don't ask again: log it. Lunch with no time means about 12:30, breakfast about 08:00, supper about 18:00 only if they say that word and give no time. " +
+    "COOKING (V4): food-table numbers are for plain cooking. The program adds salt and cooking oil from the person's 'How I cook' settings (menu). For cooked foods, pass method in log_food (raw, boiled, grilled, baked, panfried, deepfried); oil is added as its own line. If the person mentions how something was cooked, use that. " +
+    "DAYS WITH NOTHING LOGGED: the person can mark them as fasting or fill them with their average day (Trends, or Today on that day); those count in trends. " +
+    "ADD AGAIN (V4): Today has one-tap chips and a ⚡ Add again list (Most often / Recent) for things the person has had before. " +
     "HYDRATION: water and other drinks count toward the day's drinks. Log water with log_water; other drinks with log_food, kind 'drink' (grams = mL). " +
     "For a sauce or mixed dish, ask what's in it if it matters, or use save_recipe. Never show an id: call things by their names. Targets: the person can change any target (set_target). " +
     "Care: no shaming or 'bad food' talk, never push eating less, mention seeing a doctor or dietitian for health conditions, pregnancy or big changes. This is a reference, not medical advice. The person is an adult. " +
+    "HOME SCREEN & HEALTH (V3): the person can turn on fasting tracking, a monthly 3-day fast reminder, health conditions (diabetes, high blood pressure, kidney disease, gout, celiac, pregnancy, low iron, bone health, keto) " +
+    "and medicines (statin, warfarin) in menu → Home screen & health. The program then flags foods to watch (gluten, purines and beer, high-mercury and raw fish, grapefruit with statins, vitamin K with warfarin, sodium, potassium) " +
+    "and works out a meal balance score (0-100) and a blood sugar load estimate per meal; sugar with no fibre is flagged as a likely spike. When log_food reports flags, say them plainly in one short sentence each. " +
+    "Ketosis and blood sugar load are rough estimates, not measurements. Only talk about fasting if the person turned it on or asks; never suggest fasting to someone pregnant, breastfeeding or under 18; with diabetes medicine, say to check with their doctor first. " +
+    "Never diagnose. Use set_tracking when they ask to turn something on or off. " +
     "Photos are never saved. The food table is a selection from the Canadian Nutrient File (Health Canada).\n\nFOOD LIST (id: name):\n" + IK_FOODLIST.map(function (f) { return f.key + ": " + f.label + (f.m[0] ? " [" + ikMeasureLabel(f.m[0][0]) + " = " + Math.round(f.m[0][1]) + " g]" : ""); }).join("\n"),
 
   summarizeForAI: function (ctx, opts) {
@@ -8407,8 +9429,26 @@ const DD_PROGRAM = {
     var pat = ikPatterns(d, today, 7);
     if (pat.low.length) out.push("Running low (last 7 days): " + pat.low.slice(0, 5).map(function (l) { return l.label + " " + Math.round(l.pct) + "%"; }).join(", ") + ".");
     if (pat.high.length) out.push("Above upper amount (7 days): " + pat.high.map(function (l) { return l.label + " " + Math.round(l.pct) + "%"; }).join(", ") + ".");
+    var ck = ikCook(d), oilL = IK_OILS.filter(function (o) { return o.k === ck.oil; })[0];
+    out.push("How they cook" + (ck.set ? "" : " (not set yet, using the usual)") + ": salt " + IK_SALT_GROUPS.map(function (g) { return g.label.toLowerCase() + " " + ck.salt[g.k]; }).join(", ") + "; " + (oilL ? oilL.label.toLowerCase() : "oil") + (ck.oil === "none" ? "" : ", " + ck.oilAmt) + ".");
+    var fl4 = (d.dayFills || []).filter(function (f) { return f.day >= ikAddDays(today, -30); });
+    if (fl4.length) out.push("Filled days in the last 30: " + fl4.filter(function (f) { return f.kind === "fast"; }).length + " marked as fasting, " + fl4.filter(function (f) { return f.kind === "avg"; }).length + " filled with their average day.");
     if (d.recipes.length) out.push("Their recipes: " + d.recipes.map(function (r) { return r.name + " (id r:" + r.id + ")"; }).join(", ") + ".");
     if (d.customFoods.length) out.push("Their foods: " + d.customFoods.slice(-20).map(function (c) { return c.name + " (id c:" + c.id + ")"; }).join(", ") + ".");
+    /* V3: health settings, fasting, balance and flags */
+    var hcs = IK_CONDS.filter(function (c) { return ikCond(d, c.k); }).map(function (c) { return c.label; }).concat(IK_MEDS.filter(function (m) { return ikMed(d, m.k); }).map(function (m) { return "takes " + m.label.replace(/^A /, "a "); }));
+    if (hcs.length) out.push("Health settings the person turned on: " + hcs.join(", ") + ".");
+    var dmt = ikDayMeals(d, today);
+    out.push("Today's meal balance " + (dmt.balance == null ? "n/a" : dmt.balance + "/100") + ", blood sugar load (estimate) " + ikNum(dmt.load, 0) + " (" + ikLoadWord(dmt.load, true).toLowerCase() + ")" + (dmt.spikes.length ? ", " + dmt.spikes.length + " meal(s) likely to spike" : "") + ".");
+    var flt = ikDayFlags(d, ikEntriesOn(d, today));
+    if (flt.length) out.push("Today's flags: " + flt.slice(0, 6).map(function (x) { return x.f.text; }).join(" "));
+    if (ikFastCfg(d).track) { var wn = ikWindows(d, today, 7); out.push("Fasting tracking on, goal " + ikFastGoal(d) + " h. 7-day average eating window " + (wn.feed != null ? ikHM(wn.feed) : "n/a") + ", fasting window " + (wn.fast != null ? ikHM(wn.fast) : "n/a") + "."); }
+    if (opts && opts.for === "helper") {   // these change with the clock, so the agent's copy leaves them out
+      var fst = ikFastState(d);
+      if (!fst.none) out.push("Time since they last ate (estimated end of the meal): " + ikHM(fst.since) + (fst.fasting ? ", fasting" : "") + ".");
+      if (ikFastCfg(d).track) { var kz = ikKetosis(d); if (kz) out.push("Ketosis estimate: " + kz.level + "."); }
+      if (ikFastCfg(d).monthly) { var mfa = ikMonthFast(d); out.push("3-day fast: " + (mfa.skip ? "no reminder (pregnant or breastfeeding)" : mfa.ongoing ? "on day " + (Math.floor(mfa.hrs / 24) + 1) + " now" : mfa.due ? "it's been over a month, a gentle reminder is due" : mfa.last ? "last one " + Math.round(mfa.daysAgo) + " days ago" : "none logged yet") + "."); }
+    }
     if (opts && opts.for === "helper") out.push("On screen: the " + IK_UI.view + " view" + (IK_UI.view === "trends" ? " (" + IK_UI.span + ")" : "") + ".");
     if (opts && opts.for === "helper" && IK_UI.focusEntry) {
       var fe = d.entries.filter(function (x) { return x.id === IK_UI.focusEntry; })[0];
@@ -8433,7 +9473,8 @@ function ikPickEntry(d, w) {
 function ikDayArg(x) { var s = String(x || "").trim(); if (/^\d{4}-\d\d-\d\d$/.test(s)) return s; if (/yesterday/i.test(s)) return ikAddDays(ikToday(), -1); return ikToday(); }
 function ikNutrientKey(w) {
   var s = String(w || "").toLowerCase().trim(); if (!s) return null;
-  if (IK_NBY[s] || s === "drinks") return s;
+  if (IK_NBY[s] || s === "drinks" || s === "netcarb") return s;
+  if (/^net ?carb/.test(s)) return "netcarb";
   var alias = { calories: "kcal", energy: "kcal", fiber: "fibre", sodium: "na", salt: "na", potassium: "k", iron: "fe", calcium: "ca", magnesium: "mg", zinc: "zn", phosphorus: "p", selenium: "se", copper: "cu", manganese: "mn",
     carbs: "carb", carbohydrate: "carb", sugar: "sugar", "saturated fat": "sat", "vitamin a": "vitA", "vitamin c": "vitC", "vitamin d": "vitD", "vitamin e": "vitE", "vitamin k": "vitK", thiamin: "b1", riboflavin: "b2", niacin: "b3",
     "b12": "b12", "vitamin b12": "b12", "vitamin b6": "b6", folate: "folate", "folic acid": "folate", water: "drinks", omega3: "ala", "omega-3": "ala", "omega-6": "o6", fat: "fat" };
@@ -8459,7 +9500,8 @@ DD_PROGRAM.tools = [
   { name: "log_food", description: "Add food, drinks or supplements the person had, as one entry. Use ids from the FOOD LIST when they fit. Give grams (drinks: grams = mL) or servings for supplements and label foods.",
     params: { items: { type: "array", description: "Each food in this meal or drink", items: { type: "object", properties: {
         food: { type: "string", description: "Id from the FOOD LIST (or r:/c:/s: id), or a plain name if not in the list" },
-        grams: { type: "number", description: "Your best estimate of the grams eaten" }, servings: { type: "number", description: "For supplements or label foods: how many servings" },
+        grams: { type: "number", description: "Your best estimate of the grams eaten" },
+        method: { type: "string", enum: IK_METHOD_KEYS, description: "How a cooked food was cooked (the program adds the person's cooking oil)" }, servings: { type: "number", description: "For supplements or label foods: how many servings" },
         kcal_per_100g: { type: "number" }, protein_per_100g: { type: "number" }, fat_per_100g: { type: "number" }, carb_per_100g: { type: "number" }, fibre_per_100g: { type: "number" }, sugar_per_100g: { type: "number" }, sodium_mg_per_100g: { type: "number" } },
         required: ["food"] } },
       time: { type: "string", description: "24-hour time like 08:30, or 'now'", optional: true },
@@ -8468,7 +9510,7 @@ DD_PROGRAM.tools = [
       name: { type: "string", description: "Short name for the meal, like 'Breakfast sandwich'", optional: true } },
     run: function (args, ctx) {
       var d = ctx.data, day = ikDayArg(args.day), time = /^\d\d?:\d\d$/.test(args.time || "") ? ("0" + args.time).slice(-5) : (day === ikToday() ? ikNowTime() : "12:00");
-      var items = [], made = [], said = [];
+      var items = [], made = [], said = [], oilG = 0;
       (args.items || []).slice(0, 20).forEach(function (x) {
         var ref = ikRefFor(x.food, d);
         if (!ref) { var s = ikSearch(x.food, d, 1)[0]; if (s && /^(t|r|c|s):/.test(s.ref) && s.label.toLowerCase().indexOf(String(x.food).toLowerCase()) >= 0) ref = s.ref; }
@@ -8477,6 +9519,7 @@ DD_PROGRAM.tools = [
           var it = { ref: ref, name: r.label };
           if (r.perServing && !r.per100) it.n = Number(x.servings) > 0 ? Number(x.servings) : 1;
           else it.g = Math.max(1, Number(x.grams) || (r.food && r.food.m[0] ? r.food.m[0][1] : 100));
+          if (x.method && it.g && ikCookable(ref) && IK_METHOD_KEYS.indexOf(x.method) >= 0) { it.method = x.method; oilG += ikOilGrams(d, x.method, it.g); }
           items.push(it); said.push(r.label + " " + (it.n != null ? it.n + " serving(s)" : Math.round(it.g) + " g"));
         } else {
           var per = ikPer100FromEstimate(x), id = ctx.ui.uid("c"), nm = String(x.food || "Food").slice(0, 60);
@@ -8486,10 +9529,11 @@ DD_PROGRAM.tools = [
         }
       });
       if (!items.length) return { ok: false, message: "Nothing to add: say what they had." };
+      var oi = ikOilItem(d, oilG); if (oi) { items.push(oi); said.push(oi.name + " " + oi.g + " g"); }   // V4
       var e = { id: ctx.ui.uid("e"), day: day, time: time, part: ikPartOf(time), kind: args.kind || "food", name: String(args.name || "").slice(0, 60), items: items, src: "helper" };
       ctx.update(function (dt) { made.forEach(function (f) { dt.customFoods.push(f); }); ikTouch(dt, items); dt.entries.push(e); });
       var t = ikTotals([e], dd.getData());
-      return { ok: true, message: "Added to " + ikDayName(day) + " " + e.time + ": " + said.join(", ") + ". That's " + ikNum(t.v.kcal, 0) + " kcal and " + ikNum(t.v.protein, 0) + " g protein (worked out by the program)." };
+      return { ok: true, message: "Added to " + ikDayName(day) + " " + e.time + ": " + said.join(", ") + ". That's " + ikNum(t.v.kcal, 0) + " kcal and " + ikNum(t.v.protein, 0) + " g protein (worked out by the program)." + ikFlagsForAI(e, dd.getData()) };
     } },
   { name: "change_entry", description: "Change an entry: the grams of one of its foods, its time, its part of day, add a food to it, or take a food out of it.",
     params: { entry: { type: "string", description: "The entry's id (best) or its name" }, food: { type: "string", description: "Which food in it to change (name)", optional: true },
@@ -8554,14 +9598,14 @@ DD_PROGRAM.tools = [
     params: { nutrient: { type: "string", description: "One nutrient, like 'protein' (leave empty for all)", optional: true } },
     run: function (args, ctx) {
       var d = ctx.data, rec = ikRecommended(d), one = ikNutrientKey(args.nutrient), keys = one ? [one] : IK_TARGETABLE;
-      return { ok: true, message: keys.filter(function (k) { return rec[k]; }).map(function (k) { var nt = IK_NBY[k] || { label: "Drinks", unit: "mL", dp: 0 };
+      return { ok: true, message: keys.filter(function (k) { return rec[k]; }).map(function (k) { var nt = ikNt(k);
         return nt.label + ": target " + ikNum(ikTarget(d, k), nt.dp) + " " + nt.unit + (ikIsMine(d, k) ? " (their own; recommended " + ikNum(rec[k].amount, nt.dp) + ")" : " (recommended)") + (one ? ". Why: " + rec[k].why : ""); }).join("\n") };
     } },
   { name: "set_target", description: "Set the person's own target for one nutrient (or clear it to go back to the recommended amount).",
     params: { nutrient: { type: "string", description: "e.g. protein, energy, fibre, sodium, vitamin D" }, amount: { type: "number", description: "In the nutrient's usual unit; 0 clears it" } },
     run: function (args, ctx) {
       var k = ikNutrientKey(args.nutrient); if (!k || IK_TARGETABLE.indexOf(k) < 0) return { ok: false, message: "I don't have a target called '" + args.nutrient + "'." };
-      var amt = Number(args.amount) || 0, nt = IK_NBY[k] || { label: "Drinks", unit: "mL" };
+      var amt = Number(args.amount) || 0, nt = ikNt(k);
       ctx.update(function (dt) { if (amt > 0) dt.targets[k] = amt; else delete dt.targets[k]; });
       var warn = amt > 0 ? ikTargetWarning(dd.getData(), k, amt) : "";
       return { ok: true, message: amt > 0 ? nt.label + " target set to " + amt + " " + nt.unit + "." + (warn ? " Gently mention: " + warn : "") : nt.label + " is back to the recommended amount." };
@@ -8592,6 +9636,23 @@ DD_PROGRAM.tools = [
       ctx.update(function (dt) { dt.recipes.push({ id: id, name: rec.name, per100: rec.per100, totalG: rec.totalG, ingredients: rec.ingredients, plants: rec.plants, used: new Date().toISOString(), src: "helper" }); });
       return { ok: true, message: "Saved recipe '" + rec.name + "' (id r:" + id + "), " + rec.totalG + " g in all, " + ikNum(rec.per100.kcal, 0) + " kcal per 100 g." };
     } },
+  { name: "set_tracking", description: "Turn on or off one of the person's Home screen & health settings: fasting tracking, the monthly 3-day fast reminder, a health condition, a medicine they take, or one home-screen gauge.",
+    params: { what: { type: "string", description: "fasting, monthly_fast, a condition or a medicine", enum: ["fasting", "monthly_fast"].concat(IK_CONDS.map(function (c) { return c.k; }), IK_MEDS.map(function (m) { return m.k; })), optional: true },
+      gauge: { type: "string", description: "A home-screen gauge to show or hide", enum: IK_GAUGES.map(function (g) { return g.id; }), optional: true },
+      on: { type: "boolean" }, fast_hours: { type: "integer", description: "Fasting goal in hours (12 to 24)", optional: true } },
+    run: function (args, ctx) {
+      var on = args.on !== false, said = [];
+      ctx.update(function (dt) {
+        var st = dt.settings = Object.assign({}, dt.settings);
+        if (args.what === "fasting" || args.what === "monthly_fast") { st.fasting = Object.assign({}, st.fasting); st.fasting[args.what === "fasting" ? "track" : "monthly"] = on; said.push((args.what === "fasting" ? "fasting tracking" : "the monthly 3-day fast reminder") + (on ? " on" : " off")); }
+        else if (args.what === "pregnancy") { st.profile = Object.assign({}, st.profile, { pregnant: on }); said.push("pregnancy " + (on ? "on" : "off")); }
+        else if (IK_CONDS.some(function (c) { return c.k === args.what; })) { st.conditions = Object.assign({}, st.conditions); if (on) st.conditions[args.what] = true; else delete st.conditions[args.what]; said.push(args.what + (on ? " on" : " off")); }
+        else if (IK_MEDS.some(function (m) { return m.k === args.what; })) { st.meds = Object.assign({}, st.meds); if (on) st.meds[args.what] = true; else delete st.meds[args.what]; said.push(args.what + (on ? " on" : " off")); }
+        if (args.gauge && IK_GBY[args.gauge]) { st.hidden = Object.assign({}, st.hidden); if (on) delete st.hidden[args.gauge]; else st.hidden[args.gauge] = true; said.push("the " + IK_GBY[args.gauge].label.toLowerCase() + " gauge " + (on ? "shown" : "hidden")); }
+        if (args.fast_hours >= 12 && args.fast_hours <= 24) { st.fasting = Object.assign({}, st.fasting, { goal: args.fast_hours }); said.push("fasting goal " + args.fast_hours + " h"); }
+      });
+      return said.length ? { ok: true, message: "Done: " + said.join(", ") + ". It's all in menu → Home screen & health." } : { ok: false, message: "Say what to turn on or off." };
+    } },
   { name: "find_food", description: "Search the food table and the person's recipes and foods by words. Returns ids and usual measures.",
     params: { query: { type: "string" } },
     run: function (args, ctx) {
@@ -8613,11 +9674,25 @@ function ikMount(ctx) {
     else if (act === "water") ikAddWater(250);
     else if (act === "drinkphoto") ikPickPhoto({ drink: true });
     else if (act === "forgot") ikForgotMeal();
+    else if (act === "again") ikOpenAgain();
     else if (act === "profile") ikOpenProfile();
+    else if (act === "cooking") ikOpenCooking();
+    else if (act === "cookdefault") { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings, { cooking: Object.assign({}, dt.settings.cooking || {}, { set: true }) }); }); dd.ui.toast("Set: light salt and a little canola oil. Change it any time in menu → How I cook.", 4000); }
+    else if (act === "gauges") ikOpenGauges();
+    else if (act === "gauge") ikOpenGauge(b.getAttribute("data-k"));
     else if (act === "nutrients") { var det = document.getElementById("ikAllN"); if (det) { det.open = true; IK_UI.openAll = true; det.scrollIntoView({ behavior: "smooth", block: "start" }); } }
     else if (act === "helper") { if (dd.helper.isOpen && dd.helper.isOpen()) dd.helper.close(); else dd.helper.open(); }
     if (act) return;
     var ent = b.getAttribute("data-entry"); if (ent) { ikOpenEntry(ent); return; }
+    var ag = b.getAttribute("data-again"); if (ag) { ikAddAgain(ag); return; }
+    var fill = b.getAttribute("data-fill"); if (fill) {   // V4: fill days with nothing logged
+      var dd1 = dd.getData(), scope = b.getAttribute("data-scope"), list;
+      if (scope === "day") list = [IK_UI.day || ikToday()];
+      else { var sd = ikSpanDays(IK_UI.span, IK_UI.spanEnd || ikToday()); list = fill === "clear" ? sd.filter(function (x) { return ikFillMap(dd1)[x]; }) : ikGapDays(dd1, sd); }
+      ikFillDays(list, fill === "clear" ? null : fill);
+      dd.ui.toast(fill === "clear" ? "Cleared." : (list.length === 1 ? "Done: " : list.length + " days ") + (fill === "fast" ? "marked as fasting." : "filled with your average day."), 3000);
+      return;
+    }
     var dm = b.getAttribute("data-day"); if (dm) { var nd = ikAddDays(IK_UI.day || ikToday(), +dm); if (nd <= ikToday()) { IK_UI.day = nd; ikRender(ikCtx()); } return; }
     var sp = b.getAttribute("data-span"); if (sp) { IK_UI.span = sp; ikRender(ikCtx()); return; }
     var sm = b.getAttribute("data-spanmove"); if (sm) {
@@ -8634,6 +9709,15 @@ function ikMount(ctx) {
   app.addEventListener("mouseleave", function () { var tt = document.getElementById("ikTT"); if (tt) tt.remove(); });
   dd.on("helper:open", function (on) { app.querySelectorAll('[data-act="helper"]').forEach(function (b) { b.classList.toggle("on", !!on); }); });
   // a new day while the page is open: keep "Today" meaning today
+  dd.on("change", function () { IK_MEMO = {}; });
+  /* V3: the "since you last ate" and ketosis gauges move with the clock: redraw Today once a minute,
+     unless the person is typing or has a sheet open. */
+  setInterval(function () {
+    if (IK_UI.view !== "today" || document.hidden || (dd.ui.sheetOpen && dd.ui.sheetOpen())) return;
+    var a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    var d = dd.getData(); if (!ikShow(d, "lastmeal") && !ikShow(d, "ketosis") && !ikShow(d, "monthfast")) return;
+    var y = window.scrollY; ikRender(ikCtx()); window.scrollTo(0, y);
+  }, 60000);
   var lastDay = ikToday();
   setInterval(function () { var t = ikToday(); if (t !== lastDay) { if (IK_UI.day === lastDay) IK_UI.day = t; lastDay = t; ikRender(ikCtx()); } }, 60000);
   window.addEventListener("resize", function () { setTimeout(function () { if (dd.ui.measureHostBars) dd.ui.measureHostBars(); }, 120); });
