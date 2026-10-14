@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  Intake 0.1.0 (working name, was ByteBot) · a DigiDoughnut app · built 2026-10-13
+  Intake 0.2.0 (working name, was ByteBot) · a DigiDoughnut app · built 2026-10-13
   An AI food tracker: snap a photo, the AI names the foods and guesses the grams, and code works out
   every nutrient from the Canadian Nutrient File (Health Canada). Tracks day, week, month and year
   against the buyer's own targets, with plain advice.
@@ -10,6 +10,14 @@
     2. dd.files: photos read as images and shrunk on the device (about 1024 px).
     3. dd.helper: place "tab" (the app's own tab bar), dd.helper.say(), photos with one message;
        dd.ui: the app's own bottom bar (data-dd-appbar) is cleared by toasts and the helper.
+  0.2.0 (V2 handoff, Oran's iPhone test 2026-10-13), each also marked "PLATFORM CHANGE (2026-10-13 …)":
+    4. dd.setup: Firebase guide says Product categories → Security → Authentication; the npm / script tag
+       choice is explained inside the Add Firebase SDK step; the sync wizard's Send to my phone opens the
+       same screen as Settings, and an iPhone note on that screen (open in Safari, then Home Screen).
+    5. dd.agent: copying the agent instructions saves straight away; other devices tick step 5 too.
+    6. dd.ai: tier "fast" (Flash-Lite first, plain chat) and "full" (Flash first, photos).
+    7. dd.helper: dictation is stopped and forgotten when the app goes to the background.
+    8. dd.brand: brandPlace "bar" puts the tagline, banner picture and 🎨 in the top bar instead of a banner card.
   To make a new app, change only the parts marked PROGRAM-SPECIFIC (styles, markup, script)
   and the app name in the <head>.
 -->
@@ -521,6 +529,14 @@ img.dd-digibot-face{width:96px;height:96px}
 .dd-top.dd-top-hero{border-bottom:0;box-shadow:0 1px 0 var(--dd-line)}
 /* (removed: the gradient underline — the whole bar is the gradient now) */
 .dd-top.dd-top-hero .dd-tag{display:none}
+/* brandPlace "bar" (2026-10-13): tagline under the name, optional banner picture, 🎨 button */
+.dd-top.dd-top-bar .dd-tag{color:rgba(255,255,255,.88);font-size:.78rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0 0 2px;max-width:100%}
+.dd-top.dd-top-bar .dd-tag[hidden]{display:none}
+.dd-top.dd-top-img{background:linear-gradient(rgba(0,0,0,.38),rgba(0,0,0,.38)),var(--dd-top-img) center / cover no-repeat,linear-gradient(120deg,var(--dd-brand),var(--dd-accent2))}
+.dd-top-look{width:36px;height:36px;flex:none;border:0;border-radius:50%;background:rgba(255,255,255,.2);font-size:1.05rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.dd-top-look:hover{background:rgba(255,255,255,.32)}
+.dd-brand-topprev{border-radius:14px;overflow:hidden;margin:4px 0 8px;pointer-events:none}
+.dd-brand-topprev .dd-top{position:static}
 .dd-top-icon{font-size:1.35rem;line-height:1;display:inline-flex;align-items:center;flex:none}
 #dd-hero[hidden]{display:none}
 .dd-hero{position:relative;overflow:hidden;border-radius:20px;margin:6px 0 16px;min-height:150px;display:flex;align-items:flex-end;
@@ -581,7 +597,7 @@ img.dd-digibot-face{width:96px;height:96px}
    Intake (working name): an AI food tracker. Apple-website clean: lots of white space, big bold
    headings, white cards on light grey, bright ring colours. Classes start with "ik-". */
 :root{--ik-energy:#ff2d55;--ik-energy-soft:#ffe0e6;--ik-protein:#0a84ff;--ik-protein-soft:#dcecff;--ik-fibre:#30b350;--ik-fibre-soft:#d8f5df;
-  --ik-carb:#a05a2c;--ik-fat:#e8890c;--ik-vit:#ff9f0a;--ik-vit-soft:#fff0d9;--ik-min:#af52de;--ik-min-soft:#f3e5fb;--ik-water:#32ade6;--ik-water-soft:#dff4fb;
+  --ik-carb:#a05a2c;--ik-carb-soft:#f3e3d6;--ik-fat:#e8890c;--ik-fat-soft:#fdebd2;--ik-sugar:#5856d6;--ik-sugar-soft:#e4e3fa;--ik-sat:#8e6b23;--ik-sat-soft:#f1e8d4;--ik-vit:#ff9f0a;--ik-vit-soft:#fff0d9;--ik-min:#af52de;--ik-min-soft:#f3e5fb;--ik-water:#32ade6;--ik-water-soft:#dff4fb;
   --ik-ink:#1d1d1f;--ik-ink2:#6e6e73;--ik-grey:#f5f5f7;--ik-line:#ececf0;--ik-amber:#a35200;--ik-amberbg:#fff8eb;--ik-amberline:#ffcc80;--ik-high:#c4002f}
 body{background:var(--ik-grey)}
 .dd-wrap{max-width:1200px}
@@ -615,12 +631,48 @@ select.ik-input{padding-right:30px}
 .ik-view{display:none}
 .ik-view.on{display:block}
 .ik-head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
+/* Oran's iPhone, 2026-10-13: the date and title were squeezed beside the Day/Week/Month/Year control
+   (letters stacked, title hidden behind it). The title block now never gets narrower than 200 px, and on
+   phones the control drops to its own full-width row under the title. */
+.ik-head>.ik-grow{flex:1 1 200px;min-width:0}
+.ik-head .ik-eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:640px){ .ik-head>.ik-seg{order:3;flex:1 1 100%;min-width:0} }
 .ik-daynav{display:flex;gap:4px}
 .ik-daynav button{width:40px;height:40px;border-radius:50%;border:0;background:#fff;font-size:18px;cursor:pointer;color:var(--ik-ink)}
 .ik-daynav button:disabled{opacity:.35;cursor:default}
 
 /* rings */
 .ik-rings{display:flex;align-items:center;gap:18px}
+/* V2 Today (2026-10-13): big energy ring, a ring + 7-day bars per macro, drinks */
+.ik-hero{display:flex;align-items:center;gap:18px;cursor:pointer}
+.ik-heroring{position:relative;flex:none;width:168px;height:168px}
+.ik-heroring svg{width:100%;height:100%}
+.ik-heromid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.ik-heronum{font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.ik-heroside{flex:1;min-width:0;display:flex;flex-direction:column}
+.ik-heroside .ik-k{font-size:14px;font-weight:700}
+.ik-heroside .ik-v{font-size:24px;font-weight:800;line-height:1.15}
+.ik-heroside .ik-v span{font-size:14px;font-weight:600;color:var(--ik-ink2)}
+.ik-heroside .ik-spark{width:100%;max-width:150px;height:34px;color:var(--ik-ink2)}
+.ik-macros{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0 0 10px}
+.ik-macro{background:#fff;border:0;border-radius:18px;padding:12px;font:inherit;color:inherit;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-width:0}
+.ik-macrotop{display:flex;align-items:center;gap:10px;min-width:0}
+.ik-macrotop svg{flex:none;width:44px;height:44px}
+.ik-macrotx{min-width:0}
+.ik-macrotx .ik-t{font-size:13px;font-weight:700;color:var(--ik-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ik-macrotx .ik-n{font-size:19px;font-weight:800;line-height:1.15;white-space:nowrap}
+.ik-macrotx .ik-n span{font-size:12px;font-weight:600;color:var(--ik-ink2)}
+.ik-spark{display:block;width:100%;height:24px;color:var(--ik-ink2)}
+.ik-macronote{font-size:12px}
+.ik-water{display:flex;flex-direction:column;gap:10px}
+.ik-water .ik-macrotop svg:first-child{width:52px;height:52px}
+.ik-water .ik-spark{width:80px;flex:none}
+.ik-waterbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ik-waterbtns .ik-btn{min-height:44px;font-size:15px;padding:8px 10px}
+.ik-minis.ik-minis2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ik-ok{flex:none;width:38px;height:38px;border-radius:50%;border:2px solid #d2d2d7;background:#fff;color:var(--ik-ink2);font-size:18px;font-weight:800;cursor:pointer}
+.ik-ok.on{background:var(--ik-fibre);border-color:var(--ik-fibre);color:#fff}
+@media (max-width:420px){ .ik-heroring{width:140px;height:140px} .ik-heronum{font-size:32px} .ik-heroside .ik-v{font-size:20px} .ik-hero{gap:12px} }
 .ik-rings svg{flex:none;width:160px;height:160px}
 .ik-ringlegend{display:flex;flex-direction:column;gap:12px;min-width:0}
 .ik-ringlegend .ik-k{font-size:13px;font-weight:700}
@@ -824,7 +876,7 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 <div id="dd-layer"></div>     <!-- sheets and toasts render here -->
 
 <script>
-window.DD_BUILD = {"built":"2026-10-13","commit":"intake-0.1.0","platform":"0.1.0","home":""};
+window.DD_BUILD = {"built":"2026-10-13","commit":"intake-0.2.0","platform":"0.1.0","home":""};
 window.DD_LOGO = "data:image/webp;base64,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";
 /* qrcode-generator 1.4.4 by Kazuhiko Arase, MIT License — vendored so the page stays
    fully self-contained. QR codes are generated on-device; your access code never leaves the browser for this. */
@@ -1923,6 +1975,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var hasCode = dd.ai && dd.ai.hasCode();
     var sh = dd.ui.sheet(dd.menu.headHtml({ title: "Send to my phone", icon: "📲" }) +
       '<p class="dd-note" style="margin-top:0">Open your phone\'s camera and point it at this square. Tap the link that appears.</p>' +
+      /* PLATFORM CHANGE (2026-10-13): on iPhone, a Home Screen icon keeps its own saved things, apart from Safari.
+         So the order matters: scan, let it open in Safari, then add it to the Home Screen from there. */
+      '<p class="dd-note">iPhone: let the link open in Safari, then add it to your Home Screen from there. An icon you added earlier won\'t see what this square brings.</p>' +
       '<div class="dd-qr" id="dd-qr"></div>' +
       '<p class="dd-qr-timer" id="dd-qr-timer"></p>' +
       (hasCode ? '<label class="dd-check"><input type="checkbox" id="dd-qr-code" checked> Include my free access code, so the phone is ready to use</label>' +
@@ -2620,7 +2675,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         if (!refreshed && left() > 5000) {
           refreshed = true;
           return pickModel(conn, true).then(function () {
-            queue = modelQueue(conn.provider);
+            queue = modelQueue(conn.provider, req.tier);
             var fresh = untried()[0];
             if (!fresh) throw e;
             dd.errors.record("ai.switch", "all known models failed; new model found: " + fresh);
@@ -2632,7 +2687,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     }
 
     return pickModel(conn).then(function () {
-      queue = modelQueue(conn.provider);
+      queue = modelQueue(conn.provider, req.tier);
       return step(queue[0]);
     }).catch(function (e) {
       var out = fail(e, conn.provider);
@@ -2647,9 +2702,17 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
   /* Every usable model, in order: the one that last worked first, then the rest by rank,
      with models that recently failed moved to the end (still tried, never skipped). */
-  function modelQueue(provider) {
+  /* PLATFORM CHANGE (2026-10-13, Oran: "DigiBot is slow"): tier "fast" puts the quick Flash-Lite models first
+     (plain chat), tier "full" puts the stronger Flash models first (photos). No tier: the order as before.
+     Both still fall back to every other model, so a busy family never stops the helper. */
+  function modelQueue(provider, tier) {
     var m = models()[provider] || {}, busy = m.busy || {}, now = Date.now(), seen = {}, list = [];
     [m.model].concat(m.candidates || []).forEach(function (id) { if (id && !seen[id]) { seen[id] = 1; list.push(id); } });
+    if (tier === "fast" || tier === "full") {
+      var lite = function (id) { return /flash-?lite/i.test(id); };
+      var rank = function (id) { return tier === "fast" ? (lite(id) ? 0 : 1) : (lite(id) ? 1 : 0); };
+      list = list.map(function (id, i) { return { id: id, i: i }; }).sort(function (a, b) { return rank(a.id) - rank(b.id) || a.i - b.i; }).map(function (x) { return x.id; });
+    }
     return list.filter(function (id) { return !(busy[id] > now); }).concat(list.filter(function (id) { return busy[id] > now; }));
   }
   ai._queue = modelQueue;
@@ -3176,7 +3239,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var wiz = where && where.wiz, sc = wiz && wiz.screens[where.at];
     var context = "The buyer is in the '" + (wiz ? wiz.title : "setup") + "' wizard, on step " + (where ? where.at + 1 : "?") +
       " ('" + (sc ? (typeof sc.title === "function" ? sc.title() : sc.title) : "") + "'). That screen says: " + (sc ? stripTags(typeof sc.body === "function" ? sc.body() : sc.body) : "");
-    return dd.ai.chat({ system: setup.helperPrompt() + "\n\n" + context, history: [{ role: "user", text: question }] }).then(function (r) {
+    return dd.ai.chat({ system: setup.helperPrompt() + "\n\n" + context, history: [{ role: "user", text: question }], tier: "fast" }).then(function (r) {
       if (r.ok && r.text) return { text: r.text, live: true };
       return { text: scripted || "The helper can't answer right now (" + r.title.replace(/\.$/, "") + "). " + setup.noMatch, live: false };
     });
@@ -3190,11 +3253,11 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       "Facts: the access code is free from Google AI Studio, no credit card. The program keeps the code only in this browser. " +
       "Nothing they do in setup can break the program; every step can be redone." +
       (cur && cur.id === "sync" ? " Sync facts: live sync uses the buyer's own free Firebase project (console.firebase.google.com, the free Spark plan, no card). " +
-        "Steps: create a project (any name; Google Analytics and Gemini can be switched off). Left menu, Project shortcuts > Authentication (Get started the first time) > Sign-in method tab > Native providers > Anonymous > switch on Enable > Save; leave Enable Auto clean-up unticked. " +
+        "Steps: create a project (any name; Google Analytics and Gemini can be switched off). Left menu, Product categories > Security > Authentication (Get started the first time) > Sign-in method tab > Native providers > Anonymous > switch on Enable > Save; leave Enable Auto clean-up unticked. " +
         "Left menu, Databases & Storage > Realtime Database (under NoSQL, not Firestore) > Create Database > location United States for Canada/US, Belgium europe-west1 for the UK/Europe > Start in locked mode > Enable. " +
         "Rules tab (next to Data): select all, delete, paste the rules this program shows, tap Publish. " +
-        "Left menu, Settings > General > Your apps > the </> web button > App nickname anything, Firebase Hosting unticked > Register app > under Add Firebase SDK, the copy icon at the bottom right of the big box with firebaseConfig > Continue to console. " +
-        "Safe to ignore: Gemini cards and Ask Gemini, the Dynamic Links box, the yellow Sign in with Google bar, SMS Multi-factor, Rules playground, npm install, Use a script tag, the AI coding agent box. Never turn on App Check: it blocks the program. " +
+        "Left menu, Settings > General > Your apps > the </> web button > App nickname anything, Firebase Hosting unticked > Register app > under Add Firebase SDK pick 'Use a <script> tag' (skip npm), then the copy icon at the bottom right of the big box with firebaseConfig > Continue to console. " +
+        "Safe to ignore: Gemini cards and Ask Gemini, the Dynamic Links box, the yellow Sign in with Google bar, SMS Multi-factor, Rules playground, npm install, the AI coding agent box. Never turn on App Check: it blocks the program. " +
         "The setup code is not a password: it only says where the database is. Google may change button names; if what they see differs, believe their screen. Never ask for passwords." : "") +
       (cur && /^host/.test(cur.id) ? " Hosting facts: the program is ONE self-contained HTML file. It must be uploaded unchanged, keeping its file name, to an https address, " +
         "not behind a password. The host must not block outside connections (a Content-Security-Policy with connect-src 'self' breaks the helper; Neocities' free plan does this). " +
@@ -3703,7 +3766,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
 
   /* ---------- "Sync my devices" (Phase 5) ----------
      Checked against Oran's screenshots, 2026-10-07 (project "etsy", Spark plan): left menu
-     "Project shortcuts" > Authentication (Get started the first time) > Sign-in method >
+     "Product categories" > Security > Authentication (Get started the first time; was "Project shortcuts"
+     until Oran's Oct 13 test) > Sign-in method >
      Native providers > Anonymous > Enable > Save; "Databases & Storage" > Realtime Database
      (under NoSQL) > Create Database > location > Start in locked mode > Enable; Rules tab >
      Publish; Settings > General > Your apps > </> > App nickname > Register app > Add Firebase
@@ -3736,7 +3800,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       { title: "Let the program sign in",
         pic: function () { return { kind: "page", site: "Authentication · " + L("fb_signin_method", "Sign-in method"), items: [{ type: "toggle", label: L("fb_anonymous", "Anonymous") + " · " + L("fb_enable", "Enable") }], btn: L("fb_save", "Save") }; },
         todo: function () { return "Switch on <b>" + esc(L("fb_anonymous", "Anonymous")) + "</b> and tap <b>" + esc(L("fb_save", "Save")) + "</b>."; },
-        body: function () { return '<ol><li>On the left, under <b>Project shortcuts</b>, click <b>' + esc(L("fb_auth", "Authentication")) + '</b>. The first time, tap <b>' + esc(L("fb_get_started", "Get started")) + '</b>.</li>' +
+        body: function () { return '<ol><li>On the left, under <b>' + esc(L("fb_product_cats", "Product categories")) + '</b>, open <b>' + esc(L("fb_security", "Security")) + '</b> and click <b>' + esc(L("fb_auth", "Authentication")) + '</b>. The first time, tap <b>' + esc(L("fb_get_started", "Get started")) + '</b>.</li>' +
           '<li>Open the <b>' + esc(L("fb_signin_method", "Sign-in method")) + '</b> tab.</li>' +
           '<li>Under <b>Native providers</b>, click <b>' + esc(L("fb_anonymous", "Anonymous")) + '</b>.</li>' +
           '<li>Switch on <b>' + esc(L("fb_enable", "Enable")) + '</b> and tap <b>' + esc(L("fb_save", "Save")) + '</b>. It then shows <b>Enabled</b>.</li></ol>' +
@@ -3775,9 +3839,11 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         body: function () { return '<ol><li>On the left, click <b>' + esc(L("fb_settings", "Settings")) + '</b>, then <b>' + esc(L("fb_general", "General")) + '</b>.</li>' +
           '<li>Scroll to <b>' + esc(L("fb_your_apps", "Your apps")) + '</b> and click the web button <b>&lt;/&gt;</b>.</li>' +
           '<li>Type an <b>' + esc(L("fb_nickname", "App nickname")) + '</b>, like <i>My programs</i>. Leave <b>Firebase Hosting</b> unticked. Tap <b>' + esc(L("fb_register", "Register app")) + '</b>.</li>' +
-          '<li>Under <b>' + esc(L("fb_add_sdk", "Add Firebase SDK")) + '</b>, click the copy icon at the <b>bottom right of the big box</b> (the one with <i>firebaseConfig</i> in it).</li>' +
+          /* Oran, 2026-10-13: the npm / script tag choice is explained right here, where people see it. */
+          '<li>Under <b>' + esc(L("fb_add_sdk", "Add Firebase SDK")) + '</b>, Firebase asks <i>npm</i> or <i>&lt;script&gt; tag</i>. Skip npm: pick <b>' + esc(L("fb_script_tag", "Use a <script> tag")) + '</b>. ' +
+            'Then click the copy icon at the <b>bottom right of the big box</b> (the one with <i>firebaseConfig</i> in it).</li>' +
           '<li>Tap <b>' + esc(L("fb_continue_console", "Continue to console")) + '</b>.</li></ol>' +
-          '<p><b>You can ignore</b> the small <i>npm install firebase</i> box, "Use a &lt;script&gt; tag", and the "register a web app with an AI coding agent" box.</p>' +
+          '<p><b>You can ignore</b> the "register a web app with an AI coding agent" box.</p>' +
           '<p class="dd-note">Already registered an app? Your setup code is on the same Settings page, under Your apps, then SDK setup and configuration.</p>'; },
         stuck: ["Copy the whole big box. Extra bits don't matter: the program picks out what it needs.", "The setup code isn't a password: it only says where your database is."], guide: "sync_config" },
       { title: "Paste it here",
@@ -3790,9 +3856,20 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         stuck: ["It says sign-in isn't switched on? Go back to the Authentication step.", "It says the database said no? Go back to the rules step and tap Publish."], guide: "sync_paste" },
       { title: "Live sync is on!",
         pic: { kind: "done" },
-        body: function () { return '<p>This device is connected to your database. Now bring your phone in: tap <b>Send to my phone</b> and scan the square. The phone joins straight away and stays synced.</p>' +
+        /* PLATFORM CHANGE (2026-10-13, Oran's test): this button now closes setup completely and opens
+           the very same Send to my phone screen as menu → Settings, after setup has finished saving.
+           On a phone there's no button: the square has to be shown on the computer. */
+        body: function () { return '<p>This device is connected to your database.' + (dd.env.isPhone
+            ? ' To bring in your other devices, open ' + esc(program.name) + ' on your computer, then menu → ⚙️ Settings → <b>Send to my phone</b>.</p>'
+            : ' Now bring your phone in: tap <b>Send to my phone</b> and scan the square. The phone joins straight away and stays synced.</p>') +
           '<p class="dd-note">The chip at the top of the page shows "Synced" while everything is up to date.</p>'; },
-        action: { label: "📲 Send to my phone", run: function (c) { c.next(); if (dd.pair && !dd.env.isPhone) setTimeout(dd.pair.open, 250); } },
+        action: dd.env.isPhone ? null : { label: "📲 Send to my phone", run: function (c) {
+          c.next();
+          setTimeout(function () {
+            var item = dd.menu && dd.menu.items().filter(function (it) { return it.id === "phone"; })[0];
+            if (item) item.run(); else if (dd.pair) dd.pair.open();
+          }, 600);
+        } },
         nextLabel: "Done" }
     ]
   };
@@ -4209,6 +4286,15 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     recOn = true; paint();
     try { rec.start(); } catch (e) { recOn = false; rec = null; }
   }
+
+  /* PLATFORM CHANGE (2026-10-13, Oran: the microphone question came up every time the app opened).
+     The microphone is only ever started by a tap on the 🎤 button. A dictation still listening when the
+     app goes to the background is stopped and forgotten, so nothing can pick it up again (and ask for
+     the microphone) when the app comes back. */
+  function micDrop() { if (rec || recOn) { var r = rec; rec = null; recOn = false; try { if (r) { r.onend = null; r.abort(); } } catch (e) {} if (root && document.body.contains(root)) paint(); } }
+  document.addEventListener("visibilitychange", function () { if (document.hidden) micDrop(); });
+  window.addEventListener("pagehide", micDrop);
+  window.addEventListener("pageshow", function (e) { if (e && e.persisted) micDrop(); });
 
   helper.SUMMARY_MAX = 12000;   // characters of summarizeForAI sent per message
   helper.user = function () {
@@ -4637,6 +4723,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     });
     return dd.ai.chat({
       system: helper.systemPrompt(), history: hist, tools: tools,
+      tier: images && images.length ? "full" : "fast",   // 2026-10-13: quick model for talk, the stronger one for photos
       onStatus: function (s) { setBusy(true, name + (STATUS[s] || STATUS.thinking)); }
     }).then(function (r) {
       var after = snapshot(), changed = after !== before;
@@ -4887,9 +4974,14 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   }
   var SPRINKLES = null;
 
+  /* PLATFORM CHANGE (2026-10-13, Oran's V2 test): a program can set brandPlace: "bar". Then there is no big
+     banner card on the page (phones need that room for the app itself): the tagline (or the buyer's shop
+     name), the banner picture and the 🎨 button live in the top bar instead. Off by default. */
+  function inBar() { return program && program.brandPlace === "bar"; }
+  brand.inBar = inBar;
   function paintHero(L) {
     var host = document.getElementById("dd-hero"); if (!host || program.brand === false) return;
-    if (L.hidden) { host.innerHTML = ""; host.hidden = true; return; }
+    if (L.hidden || inBar()) { host.innerHTML = ""; host.hidden = true; return; }
     host.hidden = false;
     SPRINKLES = SPRINKLES || sprinkles();
     var img = L.banner ? ' style="--dd-hero-img:url(&quot;' + esc(L.banner) + '&quot;)"' : ' style="--dd-hero-sprinkles:' + esc(SPRINKLES) + '"';
@@ -4921,7 +5013,26 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
      product's icon and the buyer can't change it — their shop icon lives on the banner (paintHero). */
   function paintTop(L) {
     var top = document.getElementById("dd-top"); if (!top) return;
-    top.classList.toggle("dd-top-hero", program.brand !== false && !L.hidden);
+    var bar = inBar() && program.brand !== false;
+    top.classList.toggle("dd-top-hero", program.brand !== false && !L.hidden && !bar);
+    top.classList.toggle("dd-top-bar", bar);
+    if (bar) {
+      // the tagline line under the name: the buyer's shop name first, if they set one
+      var first = top.firstElementChild, tag = top.querySelector(".dd-tag");
+      var words = L.hidden ? "" : (L.shop ? L.shop + (program.tagline ? " · " + program.tagline : "") : (program.tagline || ""));
+      if (!tag && first && words) { tag = document.createElement("div"); tag.className = "dd-tag"; first.appendChild(tag); }
+      if (tag) { tag.textContent = words; tag.hidden = !words; }
+      top.classList.toggle("dd-top-img", !!L.banner && !L.hidden);
+      if (L.banner && !L.hidden) top.style.setProperty("--dd-top-img", 'url("' + L.banner.replace(/["\\]/g, "") + '")'); else top.style.removeProperty("--dd-top-img");
+      var slot2 = document.getElementById("dd-top-slot"), eb = document.getElementById("dd-top-look");
+      if (L.hideEdit) { if (eb) eb.remove(); }
+      else if (slot2 && !eb) {
+        eb = document.createElement("button"); eb.id = "dd-top-look"; eb.className = "dd-top-look";
+        eb.setAttribute("aria-label", "Change the look"); eb.title = "Change the look"; eb.textContent = "🎨";
+        eb.addEventListener("click", function () { brand.open(); });
+        slot2.insertBefore(eb, slot2.firstChild);
+      }
+    }
     var slot = document.getElementById("dd-top-icon"); if (!slot) return;
     slot.textContent = program.icon || "🍩";
   }
@@ -4933,7 +5044,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var sh = dd.ui.sheet(dd.menu.headHtml({ title: "Look & branding", icon: "🎨" }) +
       '<p class="dd-note" style="margin-top:0">Make ' + esc(p.name) + ' match your shop. Changes show straight away and go to your other devices with sync.</p>' +
       '<div class="dd-brand-preview" id="dd-brand-preview"></div>' +
-      '<label class="dd-check"><input type="checkbox" id="dd-b-editbtn"' + (L.hideEdit ? "" : " checked") + '> Show the “Make it yours” button on the banner <small>(it also opens this page)</small></label>' +
+      '<label class="dd-check"><input type="checkbox" id="dd-b-editbtn"' + (L.hideEdit ? "" : " checked") + '> ' + (inBar() ? 'Show the 🎨 button in the top bar' : 'Show the “Make it yours” button on the banner') + ' <small>(it also opens this page)</small></label>' +
       '<h3 class="dd-sub">Colours</h3>' +
       '<div class="dd-swatches" role="list">' + presets.map(function (c, i) {
         var on = c[1] === L.accent && c[2] === L.accent2;
@@ -4955,14 +5066,16 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       '<label class="dd-brand-field"><span>Shop icon or logo <small>a link to the picture, shown next to the name</small></span>' +
         '<input class="dd-input" id="dd-b-logo" autocomplete="off" placeholder="https://i.etsystatic.com/…" value="' + esc(L.logo) + '"></label>' +
       '<div class="dd-status" id="dd-b-status"></div>' +
-      '<label class="dd-check"><input type="checkbox" id="dd-b-hide"' + (L.hidden ? " checked" : "") + '> Hide the banner (keep the colours)</label>' +
+      '<label class="dd-check"><input type="checkbox" id="dd-b-hide"' + (L.hidden ? " checked" : "") + '> ' + (inBar() ? 'Hide the tagline and picture in the top bar (keep the colours)' : 'Hide the banner (keep the colours)') + '</label>' +
       '<div class="dd-btnrow"><button class="dd-btn" data-close>Done</button>' + (L.custom || L.hidden ? '<button class="dd-btn ghost" data-reset>Back to ' + esc(p.name) + '\'s own look</button>' : "") + '</div>',
       { sticky: true });
     sh.classList.add("dd-sheet-wide");
     var q = function (s) { return sh.querySelector(s); };
     function preview() {
-      var host = q("#dd-brand-preview"), hero = document.querySelector("#dd-hero .dd-hero");
-      host.innerHTML = hero ? hero.outerHTML : '<p class="dd-note">The banner is hidden.</p>';
+      var host = q("#dd-brand-preview"), hero = document.querySelector("#dd-hero .dd-hero"), topbar = document.getElementById("dd-top");
+      if (inBar() && topbar) host.innerHTML = '<div class="dd-brand-topprev">' + topbar.outerHTML.replace(/\sid="[^"]*"/g, "") + "</div>";
+      else host.innerHTML = hero ? hero.outerHTML : '<p class="dd-note">The banner is hidden.</p>';
+      host.querySelectorAll(".dd-top-look,.dd-sync-chip").forEach(function (x) { x.remove(); });
       host.querySelectorAll(".dd-hero-editwrap,.dd-hero-edit,.dd-hero-x").forEach(function (x) { x.remove(); });
       var c1 = q("#dd-c1").value;
       q("#dd-c-note").textContent = brand.readable(c1) !== c1.toLowerCase() ? "That main colour is light, so buttons use a slightly deeper shade of it to keep their white text readable." : "";
@@ -6286,6 +6399,12 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   function onAgent(v) {
     lastAgent = v = v || {};
     remoteView = v.view || null;
+    /* PLATFORM CHANGE (2026-10-13, Oran's test): instructions copied on ANOTHER device show up here as the
+       agent's view in the shared database. Then setup step 5 is done on this device too. */
+    if (remoteView && !agent.connected() && !agent.isAgentDevice()) {
+      dd.store.setJSON(key("agent"), { madeAt: new Date().toISOString(), elsewhere: true });
+      if (dd.setup) dd.setup.paint();
+    }
     if (!sameView(remoteView, agent.view())) scheduleView(viewTimer ? undefined : 200);
     var inbox = v.inbox && typeof v.inbox === "object" ? v.inbox : {}, done = v.done && typeof v.done === "object" ? v.done : {}, next = true;
     // Oldest first by the server's time; agents may choose their own ids (PUT), so the id alone isn't an order.
@@ -6542,10 +6661,14 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
     sh.querySelector("[data-copy]").addEventListener("click", function (e) {
       var b = e.currentTarget;
+      /* PLATFORM CHANGE (2026-10-13, Oran's test): saved the moment the button is tapped, not after the
+         clipboard answers (on some phones it never does), and step 5 is ticked straight away. */
+      dd.store.setJSON(key("agent"), { madeAt: new Date().toISOString() });
+      if (unsub) scheduleView(0);   // the agent's first look is ready straight away (and tells your other devices)
+      diag.made = new Date().toLocaleTimeString();
+      if (dd.setup) dd.setup.paint();
+      dd.ui.toast("Saved: your agent is set up (setup step 5 ✓).", 3000);
       copy(brief, sh.querySelector("#dd-agent-brief")).then(function (ok) {
-        dd.store.setJSON(key("agent"), { madeAt: new Date().toISOString() });
-        if (unsub) scheduleView(0);   // the agent's first look is ready straight away
-        diag.made = new Date().toLocaleTimeString();
         b.textContent = ok ? "✓ Copied. Paste it into your agent." : "Select the instructions below and copy them";
         if (!ok) sh.querySelector("details").open = true;
         if (dd.setup) dd.setup.paint();
@@ -6633,6 +6756,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
      suggestions    example requests shown as chips in an empty chat.
      files: {accept, label, howTo, take(file, text, ctx), images?}   lets buyers add a file.
      setup: false / helper: false / sync: false / brand: false   switch a platform part off.
+     brandPlace: "bar"   no banner card: tagline, banner picture and 🎨 go in the top bar (2026-10-13).
    Changing data: always ctx.update(function (d) { … }). Never write to storage yourself.
 
    HOW INTAKE WORKS
@@ -7053,6 +7177,62 @@ function ikMetCount(d, t, keys) {
   return keys.filter(function (k) { var tg = ikTarget(d, k); return tg > 0 && t.v[k] >= tg; }).length;
 }
 
+/* ---------- Today's rings (V2, 2026-10-13) ---------- */
+/* The macros shown under the big ring. kind: target (aim to reach) or limit (stay under). Sugars have no
+   recommended amount, so they're shown against Canada's Daily Value for total sugars (100 g). */
+function ikMacroDefs(d) {
+  var hide = ikHideKcal(d), out = [];
+  if (!hide) out.push({ k: "protein", label: "Protein", unit: "g", color: "var(--ik-protein)", soft: "var(--ik-protein-soft)", kind: "target" });
+  out.push({ k: "fat", label: "Fat", unit: "g", color: "var(--ik-fat)", soft: "var(--ik-fat-soft)", kind: "target" });
+  out.push({ k: "carb", label: "Carbs", unit: "g", color: "var(--ik-carb)", soft: "var(--ik-carb-soft)", kind: "target" });
+  out.push({ k: "sugar", label: "Sugars", unit: "g", color: "var(--ik-sugar)", soft: "var(--ik-sugar-soft)", kind: "limit", ref: 100, refNote: "Daily Value" });
+  out.push({ k: "fibre", label: "Fibre", unit: "g", color: "var(--ik-fibre)", soft: "var(--ik-fibre-soft)", kind: "target" });
+  out.push({ k: "sat", label: "Saturated fat", unit: "g", color: "var(--ik-sat)", soft: "var(--ik-sat-soft)", kind: "limit" });
+  return out;   // calories hidden: protein is in the big ring instead, and energy isn't shown at all
+}
+function ikMacroTarget(d, m) { return m.ref && !ikIsMine(d, m.k) ? m.ref : ikTarget(d, m.k) || m.ref || 0; }
+/* Seven tiny bars, oldest to the chosen day; the dashed line is the target. */
+function ikSpark(week, k, tg, color, day, getter) {
+  var vals = week.map(function (s) { return s.logged ? (getter ? getter(s) : s.t.v[k]) : 0; });
+  var max = Math.max(tg || 0, Math.max.apply(null, vals)) || 1, W = 70, H = 22, bw = 7, gap = (W - 7 * bw) / 6;
+  var out = '<svg class="ik-spark" viewBox="0 0 ' + W + " " + H + '" aria-hidden="true">';
+  vals.forEach(function (v, i) {
+    var hh = v > 0 ? Math.max(2, v / max * (H - 2)) : 1.5, x = i * (bw + gap);
+    out += '<rect x="' + x.toFixed(1) + '" y="' + (H - hh).toFixed(1) + '" width="' + bw + '" height="' + hh.toFixed(1) + '" rx="2" fill="' + color + '" opacity="' + (week[i].day === day ? 1 : 0.4) + '"/>';
+  });
+  if (tg) { var ty = (H - tg / max * (H - 2)).toFixed(1); out += '<line x1="0" x2="' + W + '" y1="' + ty + '" y2="' + ty + '" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2" opacity=".45"/>'; }
+  return out + "</svg>";
+}
+function ikHeroRing(d, t, week, day) {
+  var hide = ikHideKcal(d), k = hide ? "protein" : "kcal", unit = hide ? "g" : "kcal", label = hide ? "Protein" : "Energy";
+  var color = hide ? "var(--ik-protein)" : "var(--ik-energy)", soft = hide ? "var(--ik-protein-soft)" : "var(--ik-energy-soft)";
+  var v = t.v[k], tg = ikTarget(d, k) || 0, pct = tg ? v / tg : 0, left = Math.round(tg - v);
+  return '<section class="ik-card ik-hero" data-act="nutrients" title="See every nutrient">' +
+    '<div class="ik-heroring">' + ikRingSvg([{ label: label, pct: pct, color: color, soft: soft }], 180, 18, 0) +
+      '<div class="ik-heromid"><div class="ik-heronum">' + ikNum(v, 0) + '</div><div class="ik-small">' + unit + " of " + ikNum(tg, 0) + "</div></div></div>" +
+    '<div class="ik-heroside"><div class="ik-k ' + (hide ? "protein" : "energy") + '">' + label + "</div>" +
+      '<div class="ik-v">' + (left > 0 ? ikNum(left, 0) + "<span> " + unit + " to go</span>" : '<span class="ik-done" style="font-size:15px;margin:0">✓ Target reached</span>') + "</div>" +
+      '<div class="ik-small" style="margin-top:8px">Last 7 days</div>' + ikSpark(week, k, tg, color, day) + "</div></section>";
+}
+function ikMacroTile(d, t, week, m, day) {
+  var v = t.v[m.k], tg = ikMacroTarget(d, m), pct = tg ? v / tg : 0, over = m.kind === "limit" && pct > 1;
+  var allMissing = t.items > 0 && t.miss[m.k] >= t.items;
+  var color = over ? "var(--ik-amber)" : m.color;
+  return '<button class="ik-macro" data-act="nutrients" aria-label="' + ikEsc(m.label + " " + ikNum(v, 0) + " of " + ikNum(tg, 0) + " " + m.unit) + '">' +
+    '<div class="ik-macrotop">' + ikRingSvg([{ label: m.label, pct: allMissing ? 0 : pct, color: color, soft: m.soft }], 44, 7, 0) +
+      '<div class="ik-macrotx"><div class="ik-t">' + ikEsc(m.label) + '</div><div class="ik-n">' + (allMissing ? '<span class="ik-nm" style="font-size:13px">not measured</span>' : ikNum(v, 0) + "<span> / " + ikNum(tg, 0) + " " + m.unit + "</span>") + "</div></div></div>" +
+    ikSpark(week, m.k, tg, m.color, day) +
+    '<div class="ik-small ik-macronote">' + (m.kind === "limit" ? (over ? "Above " + (m.refNote ? "the " + m.refNote : "your upper amount") : "Upper amount") : pct >= 1 ? "✓ Reached" : Math.round(pct * 100) + "% of target") + "</div></button>";
+}
+function ikWaterTile(d, t, week, day) {
+  var tg = ikTarget(d, "drinks") || 2200, ml = t.drinksMl, pct = ml / tg;
+  return '<section class="ik-card ik-water">' +
+    '<div class="ik-macrotop">' + ikRingSvg([{ label: "Drinks", pct: pct, color: "var(--ik-water)", soft: "var(--ik-water-soft)" }], 52, 8, 0) +
+      '<div class="ik-macrotx ik-grow"><div class="ik-t">💧 Drinks today</div><div class="ik-n">' + ikNum(ml / 1000, 1) + "<span> of " + ikNum(tg / 1000, 1) + " L</span></div></div>" +
+      ikSpark(week, "drinks", tg, "var(--ik-water)", day, function (s) { return s.t.drinksMl; }) + "</div>" +
+    '<div class="ik-waterbtns"><button class="ik-btn soft" data-act="water">＋ Glass of water</button><button class="ik-btn soft" data-act="drinkphoto">📷 Snap a drink</button></div></section>';
+}
+
 /* ---------- Today ---------- */
 function ikRenderToday(ctx) {
   var d = ctx.data, day = IK_UI.day || ikToday(), isToday = day === ikToday();
@@ -7065,19 +7245,18 @@ function ikRenderToday(ctx) {
     h += '<div class="ik-card ik-setup"><b>Make the targets yours</b><p class="ik-small" style="margin:4px 0 10px">Right now your targets are Canada\'s Daily Values. Add your age, height, weight and how active you are for amounts made for you. About a minute.</p>' +
       '<button class="ik-btn" data-act="profile">Set my targets</button></div>';
   }
-  var rings = ikMainRings(d, t);
+  /* Oran, 2026-10-13 (V2): the top of Today is one big energy ring, then a ring and a small 7-day graph for
+     every macro (fats, carbs, sugars and the rest), then drinks, then vitamins and minerals. The food list
+     comes after. With calories hidden, protein takes the big ring. */
+  var week = ikDaySeries(d, ikDaysBack(day, 7));
   h += '<div class="ik-todaygrid"><div>';
-  h += '<section class="ik-card ik-rings" data-act="nutrients" style="cursor:pointer" title="See every nutrient">' + ikRingSvg(rings) + '<div class="ik-ringlegend">' +
-    rings.map(function (r) {
-      var done = r.tg && r.v >= r.tg;
-      return '<div><div class="ik-k ' + (r.k === "kcal" ? "energy" : r.k === "drinks" ? "water" : r.k) + '">' + r.label + (done ? '<span class="ik-done">✓ closed</span>' : "") + '</div><div class="ik-v">' +
-        ikNum(r.v, 0) + '<span> / ' + ikNum(r.tg, 0) + " " + r.unit + "</span></div></div>";
-    }).join("") + "</div></section>";
-  var vit = ikMetCount(d, t, IK_VITS), min = ikMetCount(d, t, IK_MINS), glasses = Math.round(t.drinksMl / 250), gTarget = Math.round((ikTarget(d, "drinks") || 2200) / 250);
-  h += '<div class="ik-minis">' +
-    '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Vitamins</div><div class="ik-n">' + vit + "<span> of " + IK_VITS.length + '</span></div><div class="ik-bar" style="background:var(--ik-vit-soft)"><i style="width:' + Math.round(vit / IK_VITS.length * 100) + '%;background:var(--ik-vit)"></i></div></button>' +
-    '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Minerals</div><div class="ik-n">' + min + "<span> of " + IK_MINS.length + '</span></div><div class="ik-bar" style="background:var(--ik-min-soft)"><i style="width:' + Math.round(min / IK_MINS.length * 100) + '%;background:var(--ik-min)"></i></div></button>' +
-    '<button class="ik-mini" data-act="water" title="Add a glass of water (250 mL)"><div class="ik-t">Drinks · tap +1 glass</div><div class="ik-n">' + glasses + "<span> of " + gTarget + '</span></div><div class="ik-bar" style="background:var(--ik-water-soft)"><i style="width:' + Math.min(100, Math.round(glasses / Math.max(1, gTarget) * 100)) + '%;background:var(--ik-water)"></i></div></button></div>';
+  h += ikHeroRing(d, t, week, day);
+  h += '<div class="ik-macros">' + ikMacroDefs(d).map(function (m) { return ikMacroTile(d, t, week, m, day); }).join("") + "</div>";
+  h += ikWaterTile(d, t, week, day);
+  var vit = ikMetCount(d, t, IK_VITS), min = ikMetCount(d, t, IK_MINS);
+  h += '<div class="ik-minis ik-minis2">' +
+    '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Vitamins on target</div><div class="ik-n">' + vit + "<span> of " + IK_VITS.length + '</span></div><div class="ik-bar" style="background:var(--ik-vit-soft)"><i style="width:' + Math.round(vit / IK_VITS.length * 100) + '%;background:var(--ik-vit)"></i></div></button>' +
+    '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Minerals on target</div><div class="ik-n">' + min + "<span> of " + IK_MINS.length + '</span></div><div class="ik-bar" style="background:var(--ik-min-soft)"><i style="width:' + Math.round(min / IK_MINS.length * 100) + '%;background:var(--ik-min)"></i></div></button></div>';
   var tip = ikTopTip(d, day);
   h += '<section class="ik-tip"><svg class="ik-tipring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="var(--ik-vit)" stroke-width="7"/></svg>' +
     '<div class="ik-tiptext"><b>' + ikEsc(name) + ":</b> " + ikEsc(tip.text) + (tip.k ? '<br><button class="ik-link" data-ask="tip" data-k="' + ikEsc(tip.k) + '">Ask ' + ikEsc(name) + " about this</button>" : "") + "</div></section>";
@@ -7100,7 +7279,7 @@ function ikRenderToday(ctx) {
   h += '<h2 class="ik-h2" style="margin-top:4px">Food' + (es.length ? "" : "") + "</h2>";
   h += '<section class="ik-list">' + (listHtml || '<div class="ik-empty">Nothing logged ' + (isToday ? "yet today" : "on this day") + '.<br>Tap the camera to snap your food, or add it by typing.</div>') + "</section>";
   h += '<div class="ik-quick"><button class="ik-btn" data-act="photo">📷 Snap my food</button><button class="ik-btn ghost" data-act="add">＋ Add by typing</button>' +
-    '<button class="ik-btn ghost" data-act="supp">💊 Supplement</button></div>';
+    '<button class="ik-btn ghost" data-act="forgot">🕐 Forgot a meal?</button><button class="ik-btn ghost" data-act="supp">💊 Supplement</button></div>';
   h += "</div></div>";
   // every nutrient, folded away
   h += '<details class="ik-card ik-more" id="ikAllN"' + (IK_UI.openAll ? " open" : "") + '><summary>Every nutrient ' + (isToday ? "today" : "this day") + "</summary>" + ikNutrientList(d, t, 1) + "</details>";
@@ -7469,7 +7648,7 @@ var IK_SIZE_REFS = [
 function ikPhotoStart(image, opts) {
   opts = opts || {};
   var d = dd.getData(), day = IK_UI.day || ikToday(), time = day === ikToday() ? ikNowTime() : "12:00";
-  IK_P = { image: image, mode: opts.label ? "label" : "food", size: null, note: "", day: day, time: time, part: ikPartOf(time), stage: "ready", items: [], label: null, busy: false, err: null };
+  IK_P = { image: image, mode: opts.label ? "label" : opts.drink ? "drink" : "food", size: null, note: "", day: day, time: time, part: ikPartOf(time), stage: "ready", items: [], label: null, busy: false, err: null };
   if (dd.helper && dd.helper.close) dd.helper.close();
   var sh = dd.ui.sheet("", { sticky: true, onClose: function () { IK_P = null; }, onOutside: function () { dd.ui.toast("Tap ✕ to close. Nothing is added until you tap Add."); } });
   sh.classList.add("ik-sheet");
@@ -7512,14 +7691,16 @@ function ikPhotoPaint() {
   }).join("") + "</div>";
   if (P.stage === "ready" || P.stage === "error") {
     h += '<div class="ik-chips" role="group" aria-label="This photo is">' +
-      '<button class="ik-chip" data-mode="food" aria-pressed="' + (P.mode === "food") + '">🍽️ My food</button><button class="ik-chip" data-mode="label" aria-pressed="' + (P.mode === "label") + '">🏷️ A Nutrition Facts label</button></div>';
-    if (P.mode === "food") {
+      '<button class="ik-chip" data-mode="food" aria-pressed="' + (P.mode === "food") + '">🍽️ My food</button><button class="ik-chip" data-mode="drink" aria-pressed="' + (P.mode === "drink") + '">🥤 A drink</button>' +
+      '<button class="ik-chip" data-mode="label" aria-pressed="' + (P.mode === "label") + '">🏷️ A label</button></div>';
+    if (P.mode === "drink") h += '<p class="ik-small" style="margin:8px 0 0">' + ikEsc(name) + " works out how much is in the glass, cup or bottle and adds it to today's drinks. Water counts toward staying hydrated.</p>";
+    if (P.mode === "food" || P.mode === "drink") {
       h += '<div class="ik-label">Something in the photo for size? (optional)</div><div class="ik-chips">' + IK_SIZE_REFS.map(function (s) {
         return '<button class="ik-chip" data-size="' + s.k + '" aria-pressed="' + (P.size === s.k) + '">' + s.label + "</button>"; }).join("") + "</div>";
       h += '<label class="ik-label" for="ikNote">Anything ' + ikEsc(name) + ' should know? (optional)</label><input class="ik-input" id="ikNote" data-note placeholder="e.g. big plate, half eaten, made with olive oil" value="' + ikEsc(P.note) + '">';
     } else h += '<p class="ik-small">' + ikEsc(name) + " reads the numbers on the label exactly, so this is the best way to get a packaged food right.</p>";
     if (P.err) h += '<div class="ik-warn"><b>' + ikEsc(P.err.title) + "</b> " + ikEsc(P.err.help || "") + "</div>";
-    h += '<button class="ik-btn wide" data-look style="margin-top:14px">' + (P.mode === "label" ? "Read the label" : "Look at my food") + "</button>" +
+    h += '<button class="ik-btn wide" data-look style="margin-top:14px">' + (P.mode === "label" ? "Read the label" : P.mode === "drink" ? "Look at my drink" : "Look at my food") + "</button>" +
       '<p class="ik-small" style="text-align:center;margin:10px 0 0">The photo goes to Google with this one request and is never saved. Only the foods and numbers are kept.</p>';
   } else if (P.stage === "looking") {
     h += '<div class="ik-working"><span class="ik-spin" aria-hidden="true"></span><span class="ik-grow">' + ikEsc(name) + " is looking at your photo…</span><button class=\"ik-link\" data-stop>Stop</button></div>";
@@ -7567,12 +7748,18 @@ function ikPhotoItemHtml(it, i, d, name) {
 }
 function ikMicOK() { return location.protocol !== "file:" && !!(window.SpeechRecognition || window.webkitSpeechRecognition); }
 /* Dictation into a box: speech to text, using the browser. The helper never talks back. */
+/* Only ever started by a tap on 🎤. Stopped and forgotten when the app goes to the background (2026-10-13). */
+var IK_REC = null;
+function ikDictateDrop() { var r = IK_REC; IK_REC = null; if (r) { try { r.abort(); } catch (e) {} } }
+document.addEventListener("visibilitychange", function () { if (document.hidden) ikDictateDrop(); });
+window.addEventListener("pagehide", ikDictateDrop);
 function ikDictate(input, btn) {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR || !input) return;
-  var rec = new SR(), base = input.value; rec.lang = navigator.language || "en-CA"; rec.interimResults = true; rec.continuous = false;
+  ikDictateDrop();
+  var rec = IK_REC = new SR(), base = input.value; rec.lang = navigator.language || "en-CA"; rec.interimResults = true; rec.continuous = false;
   btn.textContent = "■"; btn.setAttribute("aria-label", "Stop");
   rec.onresult = function (e) { var t = ""; for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript; input.value = (base ? base + " " : "") + t; };
-  rec.onend = function () { btn.textContent = "🎤"; btn.setAttribute("aria-label", "Talk instead of typing"); };
+  rec.onend = function () { if (IK_REC === rec) IK_REC = null; btn.textContent = "🎤"; btn.setAttribute("aria-label", "Talk instead of typing"); };
   rec.onerror = function () { rec.onend(); };
   btn.onclick = function () { try { rec.stop(); } catch (e) {} };
   try { rec.start(); } catch (e) { rec.onend(); }
@@ -7657,8 +7844,12 @@ function ikPhotoLook() {
           required: ["name", "match", "grams", "confidence"] } },
         is_label: { type: "boolean", description: "true when the photo is a Nutrition Facts label", optional: true } },
       run: function (args) { got = args; return { ok: true }; } };
-  var text = isLabel ? "Read this Nutrition Facts label." : "What food and drink is in this photo?" + (P.note ? " The person says: " + P.note.slice(0, 300) : "");
-  dd.ai.chat({ system: system, history: [{ role: "user", text: text, images: [{ mime: P.image.mime, data: P.image.data }] }], tools: [tool], forceTool: tool.name, once: true, hedge: false })
+  /* Hydration (Oran, 2026-10-13): a photo of a glass, mug or bottle. The AI judges how much liquid is in it. */
+  if (P.mode === "drink") system += "\n\nTHIS PHOTO IS A DRINK. Report only the liquid(s), each with drink=true. Estimate the millilitres actually in the glass, cup, mug or bottle from its size and how full it is " +
+    "(a tall drinking glass holds about 350 mL, a short tumbler about 250 mL, a mug about 300 mL, a wine glass about 150 mL poured, a standard water bottle 500 mL, a can 355 mL). " +
+    "Plain or sparkling water: match 'water'. Grams = millilitres.";
+  var text = isLabel ? "Read this Nutrition Facts label." : (P.mode === "drink" ? "How much of what drink is in this photo?" : "What food and drink is in this photo?") + (P.note ? " The person says: " + P.note.slice(0, 300) : "");
+  dd.ai.chat({ system: system, history: [{ role: "user", text: text, images: [{ mime: P.image.mime, data: P.image.data }] }], tools: [tool], forceTool: tool.name, once: true, hedge: false, tier: "full" })
     .then(function (r) {
       if (!IK_P || IK_P !== P) return;
       if (!r.ok || !got) {
@@ -7672,7 +7863,7 @@ function ikPhotoLook() {
       P.items = (got.foods || []).filter(function (f) { return f && f.name; }).slice(0, 12).map(function (f) {
         var ref = ikRefFor(f.match, d), g = Math.max(1, Math.min(3000, Number(f.grams) || 100)), mixed = !!f.mixed && !(ref && /^r:/.test(ref));
         return { name: String(f.name).slice(0, 60), ref: mixed ? null : ref, tableRef: ref, g: g, conf: /^(sure|likely|guess)$/.test(f.confidence) ? f.confidence : "likely", ask: mixed,
-                 per100: ikPer100FromEstimate(f), drink: !!f.drink || (ref && ikResolve(ref, d) && ikResolve(ref, d).kind === "drink"), x: Number(f.x), y: Number(f.y) };
+                 per100: ikPer100FromEstimate(f), drink: P.mode === "drink" || !!f.drink || (ref && ikResolve(ref, d) && ikResolve(ref, d).kind === "drink"), x: Number(f.x), y: Number(f.y) };
       }).map(function (it) { if (!isFinite(it.x)) it.x = null; if (!isFinite(it.y)) it.y = null; if (!it.ref && !it.ask && it.tableRef) it.ref = it.tableRef; return it; });
       P.stage = "results";
       if (!P.items.length) { P.stage = "error"; P.err = { title: "I couldn't see any food in that photo.", help: "Try again with the food filling more of the picture." }; }
@@ -7825,6 +8016,12 @@ function ikOpenAdd(start) {
   q.addEventListener("input", list);
   list(); if (!dd.env.isPhone) q.focus();
 }
+/* "Oh, I forgot to add lunch" (Oran, 2026-10-13): DigiBot asks what and about when, then logs it at that time. */
+function ikForgotMeal() {
+  if (!dd.helper || !dd.helper.enabled()) return;
+  if (!(dd.ai && dd.ai.hasCode())) { dd.setup.needAI("To add a meal by telling " + dd.helper.name() + ", the helper needs a free access code from Google."); return; }
+  dd.helper.say("No problem. What did you have? Say it the way you'd tell a friend, like \"half an avocado, two eggs and whole grain toast\". I'll ask about when, then add it at that time.");
+}
 function ikTellHelper() {
   if (!dd.helper || !dd.helper.enabled()) return;
   dd.helper.say("Tell me what you had, the way you'd say it: \"two eggs and a slice of rye toast with butter\" or \"a large coffee with cream\". I'll add it, and you can undo anything I change.", { chips: ["What should I eat to get more protein?"] });
@@ -7878,8 +8075,10 @@ function ikOpenEntry(id) {
       work.items.map(function (it, i) {
         var r = ikResolve(it.ref, d), x = ikTotals([{ items: [it] }], d);
         return '<div class="ik-item"><div class="ik-row"><b class="ik-grow">' + ikEsc(it.name || (r ? r.label : "Food")) + "</b>" + (it.est || (r && r.est && !r.typical) ? '<span class="ik-est">estimated</span>' : "") +
-          (it.n != null ? '<input class="ik-gnum" type="number" step="0.25" min="0.25" value="' + it.n + '" data-n="' + i + '" aria-label="Servings"><span class="ik-small">serv.</span>' :
-            '<input class="ik-gnum" type="number" step="5" min="1" value="' + Math.round(it.g || 0) + '" data-g="' + i + '" aria-label="Grams"><span class="ik-small">g</span>') +
+          (it.n != null ? '<input class="ik-gnum" type="number" inputmode="decimal" step="0.25" min="0.25" value="' + it.n + '" data-n="' + i + '" aria-label="Servings"><span class="ik-small">serv.</span>' :
+            '<input class="ik-gnum" type="number" inputmode="decimal" step="5" min="1" value="' + Math.round(it.g || 0) + '" data-g="' + i + '" aria-label="Grams"><span class="ik-small">g</span>') +
+          /* Oran, 2026-10-13: a clear ✓ next to the amount. It lights up while you type and saves straight away. */
+          '<button class="ik-ok" data-ok="' + i + '" aria-label="Save this amount" title="Save this amount">✓</button>' +
           '<button class="ik-x" data-del="' + i + '" aria-label="Remove">✕</button></div><div class="ik-small">' + (r ? ikEsc(r.label) : "This food was deleted") +
           (hide ? "" : " · " + ikNum(x.v.kcal, 0) + " kcal") + " · protein " + ikNum(x.v.protein, 1) + " g" + (r && r.food ? " · " + ikEsc(ikAbout(r.food, it.g)) : "") + "</div></div>";
       }).join("") +
@@ -7889,12 +8088,39 @@ function ikOpenEntry(id) {
       '<label class="ik-label">Note (optional)</label><input class="ik-input" data-note value="' + ikEsc(work.note || "") + '" placeholder="e.g. same sauce as yesterday">' +
       '<div class="ik-card" style="margin-top:12px"><b>' + (hide ? "" : ikNum(t.v.kcal, 0) + " kcal · ") + "protein " + ikNum(t.v.protein, 0) + " g · fibre " + ikNum(t.v.fibre, 0) + " g</b>" +
       (t.est ? '<p class="ik-small" style="margin:6px 0 0">"Estimated" means the food isn\'t in the food table, so ' + ikEsc(dd.helper ? dd.helper.name() : "DigiBot") + "'s guess is used. Pick the right food from the table, or snap the label, for exact numbers.</p>" : "") + "</div>" +
-      '<button class="ik-btn wide" data-save>Save</button><div class="ik-quick" style="margin-top:10px;justify-content:space-between">' +
+      '<button class="ik-btn wide" data-save>Save and close</button><div class="ik-quick" style="margin-top:10px;justify-content:space-between">' +
+      '<button class="ik-btn soft" data-askbot>💬 Ask ' + ikEsc(dd.helper ? dd.helper.name() : "DigiBot") + ' to change this</button>' +
       (work.items.length > 1 ? '<button class="ik-btn soft" data-recipe>🍲 Save as my recipe</button>' : "<span></span>") + '<button class="ik-btn soft" data-remove style="color:var(--ik-high)">Remove this</button></div>';
     var q = function (s) { return sh.querySelector(s); };
     q("[data-close]").addEventListener("click", dd.ui.closeSheet);
-    sh.querySelectorAll("[data-g]").forEach(function (inp) { inp.addEventListener("change", function () { work.items[+inp.getAttribute("data-g")].g = Math.max(1, +inp.value || 1); paint(); }); });
-    sh.querySelectorAll("[data-n]").forEach(function (inp) { inp.addEventListener("change", function () { work.items[+inp.getAttribute("data-n")].n = Math.max(0.25, +inp.value || 1); paint(); }); });
+    /* Amounts: typing lights up the ✓; the ✓, Enter or leaving the box saves it to the food log right away. */
+    function takeAmount(inp) {
+      var i = +(inp.getAttribute("data-g") || inp.getAttribute("data-n")), it = work.items[i]; if (!it) return false;
+      var before = it.n != null ? it.n : it.g;
+      if (inp.hasAttribute("data-g")) it.g = Math.max(1, Math.round(+inp.value || 1)); else it.n = Math.max(0.25, +inp.value || 1);
+      return (it.n != null ? it.n : it.g) !== before;
+    }
+    function saveNow(note) {
+      if (!work.items.length) return;
+      dd.update(function (dt) { dt.entries = dt.entries.map(function (x) { return x.id === id ? JSON.parse(JSON.stringify(work)) : x; }); });
+      paint();
+      if (note) dd.ui.toast(note, 2200);
+    }
+    sh.querySelectorAll("[data-g],[data-n]").forEach(function (inp) {
+      var ok = sh.querySelector('[data-ok="' + (inp.getAttribute("data-g") || inp.getAttribute("data-n")) + '"]');
+      inp.addEventListener("input", function () { if (ok) ok.classList.add("on"); });
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+      inp.addEventListener("change", function () {
+        var it = work.items[+(inp.getAttribute("data-g") || inp.getAttribute("data-n"))];
+        if (takeAmount(inp)) saveNow(ikSavedNote(it, d));
+      });
+    });
+    sh.querySelectorAll("[data-ok]").forEach(function (b) { b.addEventListener("click", function () {
+      var i = b.getAttribute("data-ok"), inp = sh.querySelector('[data-g="' + i + '"],[data-n="' + i + '"]'), it = work.items[+i];
+      if (inp) takeAmount(inp);
+      saveNow(ikSavedNote(it, d));
+    }); });
+    q("[data-askbot]").addEventListener("click", function () { dd.ui.closeSheet(); ikAskAboutEntry(id); });
     sh.querySelectorAll("[data-del]").forEach(function (b) { b.addEventListener("click", function () { work.items.splice(+b.getAttribute("data-del"), 1); paint(); }); });
     q("[data-t]").addEventListener("change", function () { work.time = q("[data-t]").value || work.time; work.part = ikPartOf(work.time); paint(); });
     q("[data-p]").addEventListener("change", function () { work.part = q("[data-p]").value; });
@@ -7921,6 +8147,21 @@ function ikOpenEntry(id) {
     });
   }
   paint();
+}
+
+function ikSavedNote(it, d) { var r = ikResolve(it.ref, d); return "✓ Saved: " + ikLc(it.name || (r ? r.label : "food")) + " " + (it.n != null ? it.n + " serv." : it.g + " g") + "."; }
+
+/* ---------- DigiBot inside one entry (Oran, 2026-10-13) ----------
+   From an entry's sheet: DigiBot opens (no AI request yet), says which entry this is and offers
+   quick changes. Each chip names the entry, so the request is clear on its own. */
+function ikAskAboutEntry(id) {
+  var d = dd.getData(), e = (d.entries || []).filter(function (x) { return x.id === id; })[0]; if (!e || !dd.helper) return;
+  IK_UI.focusEntry = id;
+  var nm = ikEntryName(e, d), when = ikNiceTime(e.time) + (e.day === ikToday() ? " today" : " on " + ikLongDate(e.day));
+  var what = (e.items || []).map(function (it) { return (it.name || "food").toLowerCase() + " " + (it.n != null ? it.n + " serv." : Math.round(it.g || 0) + " g"); }).join(", ");
+
+  dd.helper.say("Let's fix " + nm + " (" + when + ": " + what + "). Tell me what to change, like \"it was half that\" or \"add a spoon of butter\".", {
+    chips: ["Change the amount", "Change the time", "Add something to it", "Remove it"] });
 }
 
 /* ---------- profile and targets ---------- */
@@ -8079,8 +8320,9 @@ const DD_PROGRAM = {
   id: "intake",          // working name: may change until the first sale, never after (it names the saved data)
   name: "Intake",
   tagline: "Snap your food. See everything you take in.",
-  version: "0.1.0",
+  version: "0.2.0",
   schemaVersion: 1,
+  brandPlace: "bar",     // 2026-10-13: no banner card on the page; tagline and 🎨 live in the top bar
   accent: "#ff2d55",
   accent2: "#af52de",
   icon: "🥗",
@@ -8090,6 +8332,7 @@ const DD_PROGRAM = {
   menu: [
     { id: "photo", icon: "📷", label: "Snap my food", note: "Photo → foods, amounts and nutrients", run: function () { ikPickPhoto(); } },
     { id: "add", icon: "＋", label: "Add by typing", note: "Search the food table, your recipes and foods", run: function () { ikOpenAdd(); } },
+    { id: "drink", icon: "🥤", label: "Snap a drink", note: "How much is in the glass, for your drinks today", run: function () { ikPickPhoto({ drink: true }); } },
     { id: "label", icon: "🏷️", label: "Snap a Nutrition Facts label", note: "Exact numbers for packaged foods", run: function () { ikPickPhoto({ label: true }); } },
     { id: "profile", icon: "🎯", label: "My profile & targets", note: function () { return ikProfileReady((dd.getData().settings || {}).profile) ? "Recommended amounts, or your own" : "Not set yet: tap to make targets yours"; }, run: function () { ikOpenProfile(); } },
     { id: "recipes", icon: "🍲", label: "My recipes & foods", note: "Saved sauces, dishes and labels", run: function () { ikOpenRecipes(); } },
@@ -8133,14 +8376,17 @@ const DD_PROGRAM = {
     lines: ["Tell {name} what you ate", "Ask {name} what's running low", "{name} can explain your week"]
   },
 
-  suggestions: ["How much protein should I have?", "What have I been low on this week?", "I had two eggs and a slice of rye toast"],
+  suggestions: ["I forgot to add lunch", "How much protein should I have?", "What have I been low on this week?", "I had two eggs and a slice of rye toast"],
 
   knowledge: "Intake is a food tracker. The person snaps photos of food (the photo screen sends the photo to the AI once, then code works out every nutrient from the food table) or tells {name} what they ate. " +
-    "Screens: Today (rings for energy, protein and fibre; vitamins, minerals and drinks; the food list grouped Morning, Afternoon, Evening, then Drinks & supplements; a tip), " +
+    "Screens: Today (a big energy ring, then a ring and a 7-day mini graph for protein, fat, carbs, sugars, fibre and saturated fat; drinks today with a glass button and Snap a drink; vitamins and minerals; the food list grouped Morning, Afternoon, Evening, then Drinks & supplements; a tip), " +
     "Trends (day, week, month or year: charts for energy, protein/carbs/fat, kinds of fat, vitamins and minerals; what's running low) and Advice (weekly check-in, running low, upper limits, 'How much should I have?'). " +
-    "The menu (the app's name, top left) has Snap my food, Add by typing, Snap a Nutrition Facts label, My profile & targets, My recipes & foods, About the numbers. " +
+    "The menu (the app's name, top left) has Snap my food, Add by typing, Snap a drink, Snap a Nutrition Facts label, My profile & targets, My recipes & foods, About the numbers. " +
     "RULES: Numbers come from the program's code, never from you. To know amounts or totals, call get_nutrients or get_patterns and quote their numbers. Never calculate nutrients yourself. " +
     "To log food the person describes, call log_food with ids from the FOOD LIST below and your best gram estimate (use the measures: 1 cup = 250 mL). For something not in the list, pass its name with your per-100 g estimates: it's saved and marked 'estimated'. " +
+    "FORGOTTEN OR EARLIER MEALS: when the person tells you about food they had earlier, or says they forgot to log something, and hasn't said when, first ask ONE short question: 'About what time did you have it?' (and which day if it might not be today). " +
+    "When they answer, call log_food with that time (24-hour) and day, then confirm in one sentence with the time. If they already said the time ('for lunch around noon'), don't ask again: log it. Lunch with no time means about 12:30, breakfast about 08:00, supper about 18:00 only if they say that word and give no time. " +
+    "HYDRATION: water and other drinks count toward the day's drinks. Log water with log_water; other drinks with log_food, kind 'drink' (grams = mL). " +
     "For a sauce or mixed dish, ask what's in it if it matters, or use save_recipe. Never show an id: call things by their names. Targets: the person can change any target (set_target). " +
     "Care: no shaming or 'bad food' talk, never push eating less, mention seeing a doctor or dietitian for health conditions, pregnancy or big changes. This is a reference, not medical advice. The person is an adult. " +
     "Photos are never saved. The food table is a selection from the Canadian Nutrient File (Health Canada).\n\nFOOD LIST (id: name):\n" + IK_FOODLIST.map(function (f) { return f.key + ": " + f.label + (f.m[0] ? " [" + ikMeasureLabel(f.m[0][0]) + " = " + Math.round(f.m[0][1]) + " g]" : ""); }).join("\n"),
@@ -8164,6 +8410,10 @@ const DD_PROGRAM = {
     if (d.recipes.length) out.push("Their recipes: " + d.recipes.map(function (r) { return r.name + " (id r:" + r.id + ")"; }).join(", ") + ".");
     if (d.customFoods.length) out.push("Their foods: " + d.customFoods.slice(-20).map(function (c) { return c.name + " (id c:" + c.id + ")"; }).join(", ") + ".");
     if (opts && opts.for === "helper") out.push("On screen: the " + IK_UI.view + " view" + (IK_UI.view === "trends" ? " (" + IK_UI.span + ")" : "") + ".");
+    if (opts && opts.for === "helper" && IK_UI.focusEntry) {
+      var fe = d.entries.filter(function (x) { return x.id === IK_UI.focusEntry; })[0];
+      if (fe) out.push("The person opened this entry and asked you to change it: " + ikEntryName(fe, d) + " (id " + fe.id + ", " + fe.day + " " + fe.time + "). Use change_entry or remove_entry with that id.");
+    }
     return out.join("\n");
   },
 
@@ -8241,9 +8491,12 @@ DD_PROGRAM.tools = [
       var t = ikTotals([e], dd.getData());
       return { ok: true, message: "Added to " + ikDayName(day) + " " + e.time + ": " + said.join(", ") + ". That's " + ikNum(t.v.kcal, 0) + " kcal and " + ikNum(t.v.protein, 0) + " g protein (worked out by the program)." };
     } },
-  { name: "change_entry", description: "Change an entry: the grams of one of its foods, its time, or its part of day.",
+  { name: "change_entry", description: "Change an entry: the grams of one of its foods, its time, its part of day, add a food to it, or take a food out of it.",
     params: { entry: { type: "string", description: "The entry's id (best) or its name" }, food: { type: "string", description: "Which food in it to change (name)", optional: true },
-      grams: { type: "number", optional: true }, time: { type: "string", description: "24-hour time", optional: true }, part: { type: "string", enum: ["morning", "afternoon", "evening"], optional: true } },
+      grams: { type: "number", optional: true }, time: { type: "string", description: "24-hour time", optional: true }, part: { type: "string", enum: ["morning", "afternoon", "evening"], optional: true },
+      add_food: { type: "string", description: "A food to add to this entry: id from the FOOD LIST (or r:/c: id)", optional: true },
+      add_grams: { type: "number", description: "Grams of the added food", optional: true },
+      remove_food: { type: "string", description: "Name of a food to take out of this entry", optional: true } },
     run: function (args, ctx) {
       var r = ikPickEntry(ctx.data, args.entry); if (!r.entry) return { ok: false, message: r.problem };
       var id = r.entry.id, said = [];
@@ -8255,6 +8508,18 @@ DD_PROGRAM.tools = [
         }
         if (/^\d\d?:\d\d$/.test(args.time || "")) { e.time = ("0" + args.time).slice(-5); e.part = ikPartOf(e.time); said.push("time " + e.time); }
         if (IK_PARTS[args.part]) { e.part = args.part; said.push(IK_PARTS[args.part].toLowerCase()); }
+        /* 2026-10-13: add or take out a food (DigiBot inside an entry) */
+        if (args.add_food) {
+          var ref = ikRefFor(args.add_food, dt); if (!ref) { var sh = ikSearch(args.add_food, dt, 1)[0]; if (sh) ref = sh.ref; }
+          var rr2 = ref ? ikResolve(ref, dt) : null;
+          if (rr2) { var g = args.add_grams > 0 ? Math.round(args.add_grams) : (rr2.food && rr2.food.m[0] ? Math.round(rr2.food.m[0][1]) : 100); e.items.push({ ref: ref, g: g, name: rr2.label }); said.push("added " + rr2.label + " " + g + " g"); }
+          else said.push("couldn't find '" + args.add_food + "' in the food table");
+        }
+        if (args.remove_food && e.items.length > 1) {
+          var lw = String(args.remove_food).toLowerCase(), keep = e.items.filter(function (i) { var r3 = ikResolve(i.ref, dt); return (i.name || (r3 ? r3.label : "")).toLowerCase().indexOf(lw) < 0; });
+          if (keep.length && keep.length < e.items.length) { e.items = keep; said.push("took out " + args.remove_food); }
+          else if (!keep.length) said.push("that's the whole entry: use remove_entry to remove it");
+        }
       });
       return { ok: true, message: said.length ? "Changed " + ikEntryName(r.entry, ctx.data) + ": " + said.join(", ") + "." : "Nothing to change." };
     } },
@@ -8346,6 +8611,8 @@ function ikMount(ctx) {
     else if (act === "add") ikOpenAdd();
     else if (act === "supp") ikOpenSupps();
     else if (act === "water") ikAddWater(250);
+    else if (act === "drinkphoto") ikPickPhoto({ drink: true });
+    else if (act === "forgot") ikForgotMeal();
     else if (act === "profile") ikOpenProfile();
     else if (act === "nutrients") { var det = document.getElementById("ikAllN"); if (det) { det.open = true; IK_UI.openAll = true; det.scrollIntoView({ behavior: "smooth", block: "start" }); } }
     else if (act === "helper") { if (dd.helper.isOpen && dd.helper.isOpen()) dd.helper.close(); else dd.helper.open(); }
