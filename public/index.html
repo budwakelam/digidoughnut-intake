@@ -24,6 +24,8 @@
   screen and Add by typing ask how a food was cooked and add the oil as its own line. Busy photos (several plates or
   lots of foods) get a "try one plate at a time" nudge instead of a bare error. Past days with nothing logged can be
   marked as fasting or filled with the person's average day (Today on that day, or Trends), so trends stay honest.
+  ✏️ My own food or supplement: type exactly what's in it (per serving or per 100 g, any nutrient), from Add by typing,
+  Supplement, My recipes & foods, or "Use my own numbers" on any food in a meal. Editing one fixes every day it was had.
   ⚡ Add again: one-tap chips on Today for the things you have most, and a list with Most often / Recent tabs.
   Platform change, marked "PLATFORM CHANGE (2026-10-13 V4)": dd.helper dictation (above).
   0.3.0 (V3 handoff, Oran 2026-10-13): the home screen as an instrument cluster. Menu → Home screen & health turns
@@ -7173,10 +7175,10 @@ function ikItemNutrients(item, d) {
   if (!r) { IK_N.forEach(function (n) { out.miss[n.k] = true; }); return out; }
   var per = null, factor = 0;
   if (r.perServing && (item.n != null || !r.per100)) { per = r.perServing; factor = item.n != null ? Number(item.n) : (item.g && r.servingG ? item.g / r.servingG : 1); }
-  else if (r.per100) { per = r.per100; factor = (Number(item.g) || 0) / 100; }
+  else if (r.per100) { per = r.per100; factor = item.g != null ? (Number(item.g) || 0) / 100 : item.n != null ? Number(item.n) * (r.servingG || 100) / 100 : 0; }
   IK_N.forEach(function (n) {
     var x = per ? per[n.k] : null;
-    if (x == null) { if (r.type !== "supp") out.miss[n.k] = true; return; }
+    if (x == null) { if (r.type !== "supp" && r.kind !== "supplement") out.miss[n.k] = true; return; }
     out.v[n.k] = x * factor;
   });
   if (r.food && out.v.na != null) out.v.na += ikSaltAdd(d, r.food.key) * factor;   // V4: how the person salts this food group
@@ -8911,11 +8913,12 @@ function ikOpenAdd(start) {
   var sh = dd.ui.sheet('<div class="ik-sheettop"><h2>Add food or a drink</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
     '<input class="ik-input" data-q placeholder="Type a food, e.g. banana, rye bread, my meat sauce" autocomplete="off" value="' + ikEsc(start || "") + '">' +
     '<div class="ik-hits" data-hits></div><div data-amount></div>' +
-    '<div class="ik-quick" style="margin-top:12px"><button class="ik-btn soft" data-tell>💬 Tell ' + ikEsc(name) + ' instead</button><button class="ik-btn soft" data-label>🏷️ Snap a label</button></div>', { sticky: true });
+    '<div class="ik-quick" style="margin-top:12px"><button class="ik-btn soft" data-mine>✏️ Make my own food or supplement</button><button class="ik-btn soft" data-tell>💬 Tell ' + ikEsc(name) + ' instead</button><button class="ik-btn soft" data-label>🏷️ Snap a label</button></div>', { sticky: true });
   sh.classList.add("ik-sheet");
   var q = sh.querySelector("[data-q]"), hits = sh.querySelector("[data-hits]"), amt = sh.querySelector("[data-amount]");
   sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
   sh.querySelector("[data-tell]").addEventListener("click", function () { dd.ui.closeSheet(); ikTellHelper(); });
+  sh.querySelector("[data-mine]").addEventListener("click", function () { ikOpenFoodEditor({ name: q.value.trim(), addNow: true }); });
   sh.querySelector("[data-label]").addEventListener("click", function () { dd.ui.closeSheet(); ikPickPhoto({ label: true }); });
   function list() {
     chosen = null; amt.innerHTML = "";
@@ -8926,7 +8929,8 @@ function ikOpenAdd(start) {
       res = recent;
     }
     hits.innerHTML = res.length ? res.map(function (h, i) { return '<button class="ik-hit" data-i="' + i + '"><span class="ik-grow">' + ikEsc(h.label) + "</span><small>" + ikEsc(h.sub) + "</small></button>"; }).join("") :
-      '<div class="ik-empty">' + (q.value.trim() ? "Nothing matches. Try a simpler word, or tell " + ikEsc(name) + "." : "Type to search the food table, your recipes and your foods.") + "</div>";
+      '<div class="ik-empty">' + (q.value.trim() ? "Nothing matches. Try a simpler word, or tell " + ikEsc(name) + '.<br><button class="ik-btn soft" data-mkq style="margin-top:10px">✏️ Make “' + ikEsc(q.value.trim().slice(0, 40)) + '” with my own numbers</button>' : "Type to search the food table, your recipes and your foods.") + "</div>";
+    var mk = hits.querySelector("[data-mkq]"); if (mk) mk.addEventListener("click", function () { ikOpenFoodEditor({ name: q.value.trim().slice(0, 60), addNow: true }); });
     hits.querySelectorAll("[data-i]").forEach(function (b) { b.addEventListener("click", function () { pick(res[+b.getAttribute("data-i")]); }); });
   }
   function pick(h) {
@@ -9035,14 +9039,110 @@ function ikOpenAgain() {
   paint();
 }
 
+/* ---------- V4: my own food or supplement, with my own numbers (Oran, 2026-10-13) ----------
+   For anything the table doesn't have or gets wrong (psyllium fibre, a protein powder, a vitamin).
+   Numbers are per serving (one scoop, one capsule) or per 100 g. An empty box means "not in it".
+   Editing a food changes every day it was had, since the numbers are worked out when shown.
+   opts: {id (edit), name, kind, prefill:{perServing|per100}, addNow, swap:{entry, index}, onDone, onCancel} */
+var IK_FE_MAIN = ["kcal", "protein", "fibre", "carb", "sugar", "fat", "sat", "na"];
+function ikFoodUsed(d, id) { return (d.entries || []).some(function (e) { return (e.items || []).some(function (i) { return i.ref === "c:" + id; }); }); }
+function ikOpenFoodEditor(opts) {
+  opts = opts || {};
+  var d0 = dd.getData(), c = opts.id ? (d0.customFoods || []).filter(function (x) { return x.id === opts.id; })[0] : null;
+  var src = c || opts.prefill || {};
+  var w = { name: c ? c.name : opts.name || "", kind: c ? c.kind || "food" : opts.kind || "food", sg: c ? c.servingG || null : null };
+  var basis = src.perServing ? "serving" : src.per100 ? "100" : "serving";
+  var vals = {}; var from = src.perServing || src.per100 || {};
+  IK_N.forEach(function (n) { var v = from[n.k]; if (v != null && isFinite(v)) vals[n.k] = +(+v).toPrecision(4); });
+  var name = dd.helper ? dd.helper.name() : "DigiBot", saved = false;
+  var sh = dd.ui.sheet("", { sticky: true, onClose: function () { if (!saved && opts.onCancel) setTimeout(opts.onCancel, 0); } });
+  sh.classList.add("ik-sheet");
+  function field(k) {
+    var nt = IK_NBY[k], v = vals[k];
+    return '<div class="ik-tgt" style="grid-template-columns:minmax(0,1fr) 120px"><span>' + ikEsc(nt.label) + ' <span class="ik-small">' + nt.unit + '</span></span>' +
+      '<input type="number" inputmode="decimal" min="0" step="any" data-nk="' + k + '" value="' + (v == null ? "" : v) + '" placeholder="–" aria-label="' + ikEsc(nt.label + " in " + nt.unit) + '"></div>';
+  }
+  function collect() {
+    var nm = sh.querySelector("[data-fname]"); if (nm) w.name = nm.value.trim().slice(0, 60);
+    var sg = sh.querySelector("[data-sg]"); if (sg) w.sg = +sg.value > 0 ? +sg.value : null;
+    sh.querySelectorAll("[data-nk]").forEach(function (inp) { var k = inp.getAttribute("data-nk"), v = inp.value.trim(); if (v === "") delete vals[k]; else if (isFinite(+v) && +v >= 0) vals[k] = +v; });
+  }
+  function paint() {
+    var d = dd.getData(), used = c && ikFoodUsed(d, c.id), day = IK_UI.day || ikToday(), isSupp = w.kind === "supplement";
+    var chip = function (attr, val, on, label) { return '<button class="ik-chip" ' + attr + '="' + val + '" aria-pressed="' + on + '">' + label + "</button>"; };
+    var more = IK_N.filter(function (n) { return IK_FE_MAIN.indexOf(n.k) < 0 && n.k !== "water"; }), lastG = "";
+    var moreFilled = more.some(function (n) { return vals[n.k] != null; });
+    var h = '<div class="ik-sheettop"><h2>' + (c ? "Edit " + ikEsc(c.name) : opts.swap ? "My own numbers" : "My own food or supplement") + '</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+      '<label class="ik-label" style="margin-top:0">Name</label><input class="ik-input" data-fname maxlength="60" placeholder="e.g. Psyllium husk fibre" value="' + ikEsc(w.name) + '">' +
+      '<div class="ik-label">It\'s a</div><div class="ik-chips">' + chip("data-kind", "food", w.kind === "food", "🍽️ Food") + chip("data-kind", "drink", w.kind === "drink", "🥤 Drink") + chip("data-kind", "supplement", isSupp, "💊 Supplement") + "</div>" +
+      '<div class="ik-label">The numbers are for</div><div class="ik-chips">' + chip("data-basis", "serving", basis === "serving", "One serving") + chip("data-basis", "100", basis === "100", "100 g (or 100 mL)") + "</div>" +
+      (basis === "serving" ? '<label class="ik-label">One serving weighs (g or mL, optional)</label><input class="ik-input" type="number" inputmode="decimal" min="0" step="any" data-sg value="' + (w.sg || "") + '" placeholder="e.g. 6" style="max-width:160px">' : "") +
+      '<p class="ik-small" style="margin:10px 0 4px">' + (isSupp ? "Copy the numbers from the label for one serving (one capsule, one scoop, one teaspoon). " : "Copy them from the Nutrition Facts label, or type what you know. ") + "Leave a box empty if it isn't in it.</p>" +
+      '<div class="ik-card" style="padding:8px 14px">' + IK_FE_MAIN.map(field).join("") + "</div>" +
+      '<details class="ik-card ik-more"' + (moreFilled ? " open" : "") + '><summary>More: vitamins, minerals and other fats</summary>' +
+        more.map(function (n) { var hd = n.g !== lastG ? '<div class="ik-ngroup" style="margin:10px 0 0">' + ikEsc(n.g) + "</div>" : ""; lastG = n.g; return hd + field(n.k); }).join("") + "</details>" +
+      (used ? '<p class="ik-small">Saving changes the numbers on every day you\'ve had ' + ikEsc(c.name) + ".</p>" : "") +
+      '<div class="dd-status" data-st></div>' +
+      (opts.swap ? '<button class="ik-btn wide" data-save="swap">Save and use these numbers</button><p class="ik-small" style="text-align:center">It\'s saved under My foods for next time, and this meal counts it.</p>'
+        : (c ? '<button class="ik-btn wide" data-save="1">Save</button>' : "") +
+          '<button class="ik-btn' + (c ? " ghost" : "") + ' wide" data-save="add" style="margin-top:8px">Save and add 1 ' + (basis === "serving" ? "serving" : "× 100 g") + " to " + ikEsc(day === ikToday() ? "today" : ikDayName(day)) + "</button>" +
+          (!c ? '<button class="ik-btn ghost wide" data-save="1" style="margin-top:8px">Just save it</button>' : "")) +
+      (c && !used ? '<button class="ik-link" data-delfood style="color:var(--ik-high);display:block;margin:10px auto 0">Delete this food</button>' : "") +
+      '<p class="ik-small" style="text-align:center">You can also tell ' + ikEsc(name) + ", like \"my psyllium has 5 g fibre a teaspoon\".</p>";
+    sh.innerHTML = h;
+    var q = function (x) { return sh.querySelector(x); };
+    q("[data-close]").addEventListener("click", dd.ui.closeSheet);
+    sh.querySelectorAll("[data-kind]").forEach(function (b) { b.addEventListener("click", function () { collect(); w.kind = b.getAttribute("data-kind"); paint(); }); });
+    sh.querySelectorAll("[data-basis]").forEach(function (b) { b.addEventListener("click", function () { collect(); basis = b.getAttribute("data-basis"); paint(); }); });
+    sh.querySelectorAll("[data-save]").forEach(function (b) { b.addEventListener("click", function () { save(b.getAttribute("data-save")); }); });
+    var df = q("[data-delfood]"); if (df) df.addEventListener("click", function () {
+      dd.update(function (dt) { dt.customFoods = dt.customFoods.filter(function (x) { return x.id !== c.id; }); });
+      saved = true; dd.ui.closeSheet(); dd.ui.toast("Deleted."); if (opts.onDone) setTimeout(opts.onDone, 0);
+    });
+    if (!w.name && !dd.env.isPhone) q("[data-fname]").focus();
+  }
+  function save(how) {
+    collect();
+    var st = sh.querySelector("[data-st]");
+    if (!w.name) { dd.ui.status(st, "warn", "Give it a name first."); return; }
+    if (!Object.keys(vals).length) { dd.ui.status(st, "warn", "Type at least one number, like the fibre."); return; }
+    var per = {}; IK_N.forEach(function (n) { per[n.k] = vals[n.k] != null ? vals[n.k] : null; });
+    var food = { id: c ? c.id : dd.ui.uid("c"), name: w.name, kind: w.kind, src: c && c.src === "label" ? "label" : "mine", used: new Date().toISOString() };
+    if (basis === "serving") { food.perServing = per; food.servingG = w.sg; } else food.per100 = per;
+    var day = IK_UI.day || ikToday(), t = day === ikToday() ? ikNowTime() : "12:00", added = null;
+    dd.update(function (dt) {
+      if (c) dt.customFoods = dt.customFoods.map(function (x) { return x.id === c.id ? food : x; }); else dt.customFoods.push(food);
+      if (how === "swap" && opts.swap) dt.entries.forEach(function (e) {
+        if (e.id !== opts.swap.entry || !e.items[opts.swap.index]) return;
+        var it = e.items[opts.swap.index], g = it.g, n = it.n;
+        var next = { ref: "c:" + food.id, name: food.name };
+        if (basis === "serving") next.n = n != null ? n : (g && food.servingG ? +(g / food.servingG).toFixed(2) : 1);
+        else next.g = g != null ? g : (n != null ? n * (food.servingG || 100) : 100);
+        e.items[opts.swap.index] = next;
+      });
+      if (how === "add") {
+        added = { id: dd.ui.uid("e"), day: day, time: t, part: ikPartOf(t), kind: w.kind, name: "", src: "typed",
+                  items: [basis === "serving" ? { ref: "c:" + food.id, n: 1, name: food.name } : { ref: "c:" + food.id, g: 100, name: food.name }] };
+        dt.entries.push(added);
+      }
+    });
+    saved = true; dd.ui.closeSheet();
+    var dn = dd.getData(), v = added ? ikTotals([added], dn).v : null;
+    dd.ui.toast(added ? "Added " + food.name + (v.fibre ? ": " + ikNum(v.fibre, 1) + " g fibre" : "") + "." : "Saved " + food.name + ".", 3000);
+    if (opts.onDone) setTimeout(opts.onDone, 0);
+  }
+  paint();
+}
+
 /* ---------- supplements ---------- */
 function ikOpenSupps() {
   var d = dd.getData(), mine = (d.customFoods || []).filter(function (c) { return c.kind === "supplement"; }), day = IK_UI.day || ikToday();
-  var rows = mine.map(function (c) { return { ref: "c:" + c.id, label: c.name, sub: "From my label" }; }).concat(Object.keys(IK_SUPPS).map(function (k) { return { ref: "s:" + k, label: IK_SUPPS[k].label, sub: "Typical amounts" }; }));
+  var rows = mine.map(function (c) { return { ref: "c:" + c.id, label: c.name, sub: c.src === "label" ? "From my label" : "Mine" }; }).concat(Object.keys(IK_SUPPS).map(function (k) { return { ref: "s:" + k, label: IK_SUPPS[k].label, sub: "Typical amounts" }; }));
   var sh = dd.ui.sheet('<div class="ik-sheettop"><h2>Add a supplement</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
     '<p class="ik-small">Supplements count toward your vitamins and minerals. "Typical" ones use common amounts: snap your bottle\'s label for exact numbers.</p>' +
     '<div class="ik-hits">' + rows.map(function (r, i) { return '<button class="ik-hit" data-i="' + i + '"><span class="ik-grow">' + ikEsc(r.label) + "</span><small>" + r.sub + "</small></button>"; }).join("") + "</div>" +
-    '<div class="ik-quick" style="margin-top:12px"><button class="ik-btn soft" data-label>🏷️ Snap my supplement\'s label</button></div>');
+    '<div class="ik-quick" style="margin-top:12px"><button class="ik-btn soft" data-mine>✏️ Make my own supplement</button><button class="ik-btn soft" data-label>🏷️ Snap my supplement\'s label</button></div>');
+  sh.querySelector("[data-mine]").addEventListener("click", function () { ikOpenFoodEditor({ kind: "supplement", addNow: true }); });
   sh.classList.add("ik-sheet");
   sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
   sh.querySelector("[data-label]").addEventListener("click", function () { dd.ui.closeSheet(); ikPickPhoto({ label: true }); });
@@ -9088,7 +9188,8 @@ function ikOpenEntry(id) {
           /* Oran, 2026-10-13: a clear ✓ next to the amount. It lights up while you type and saves straight away. */
           '<button class="ik-ok" data-ok="' + i + '" aria-label="Save this amount" title="Save this amount">✓</button>' +
           '<button class="ik-x" data-del="' + i + '" aria-label="Remove">✕</button></div><div class="ik-small">' + (r ? ikEsc(r.label) : "This food was deleted") +
-          (hide ? "" : " · " + ikNum(x.v.kcal, 0) + " kcal") + " · protein " + ikNum(x.v.protein, 1) + " g" + (r && r.food ? " · " + ikEsc(ikAbout(r.food, it.g)) : "") + "</div></div>";
+          (hide ? "" : " · " + ikNum(x.v.kcal, 0) + " kcal") + " · protein " + ikNum(x.v.protein, 1) + " g" + (r && r.food ? " · " + ikEsc(ikAbout(r.food, it.g)) : "") +
+          (r && !it.oil && r.type !== "recipe" ? '<br><button class="ik-link" data-own="' + i + '" style="padding:4px 0;min-height:0">' + (r.type === "custom" ? "✏️ Edit what's in it" : "✏️ Use my own numbers") + "</button>" : "") + "</div></div>";
       }).join("") +
       '<button class="ik-link" data-addone>＋ Add a food to this</button>' +
       '<div class="ik-two"><div><label class="ik-label">Time</label><input class="ik-input" type="time" value="' + ikEsc(work.time) + '" data-t></div><div><label class="ik-label">Part of day</label><select class="ik-input" data-p>' +
@@ -9130,6 +9231,14 @@ function ikOpenEntry(id) {
     }); });
     q("[data-askbot]").addEventListener("click", function () { dd.ui.closeSheet(); ikAskAboutEntry(id); });
     sh.querySelectorAll("[data-del]").forEach(function (b) { b.addEventListener("click", function () { work.items.splice(+b.getAttribute("data-del"), 1); paint(); }); });
+    sh.querySelectorAll("[data-own]").forEach(function (b) { b.addEventListener("click", function () {   // V4: change what a food or supplement adds
+      var i = +b.getAttribute("data-own"), it = work.items[i], r = ikResolve(it.ref, d); if (!r) return;
+      if (work.items.length) dd.update(function (dt) { dt.entries = dt.entries.map(function (x) { return x.id === id ? JSON.parse(JSON.stringify(work)) : x; }); });
+      var back = function () { ikOpenEntry(id); };
+      if (r.type === "custom") ikOpenFoodEditor({ id: r.custom.id, onDone: back, onCancel: back });
+      else ikOpenFoodEditor({ name: r.label, kind: r.kind === "supplement" || r.type === "supp" ? "supplement" : r.kind || "food",
+        prefill: r.perServing ? { perServing: r.perServing } : { per100: r.per100 }, swap: { entry: id, index: i }, onDone: back, onCancel: back });
+    }); });
     q("[data-t]").addEventListener("change", function () { work.time = q("[data-t]").value || work.time; work.part = ikPartOf(work.time); paint(); });
     q("[data-p]").addEventListener("change", function () { work.part = q("[data-p]").value; });
     q("[data-note]").addEventListener("input", function () { work.note = q("[data-note]").value.slice(0, 120); });
@@ -9232,14 +9341,15 @@ function ikOpenRecipes() {
     var d = dd.getData(), hide = ikHideKcal(d);
     var rec = d.recipes || [], foods = d.customFoods || [];
     sh.innerHTML = '<div class="ik-sheettop"><h2>My recipes &amp; foods</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
-      '<p class="ik-small">A sauce or dish is saved once, so "same as last night" counts it the same way every time.</p><h3>Recipes</h3>' +
+      '<p class="ik-small">A sauce or dish is saved once, so "same as last night" counts it the same way every time.</p>' +
+      '<button class="ik-btn soft" data-newfood style="margin:0 0 6px">✏️ New food or supplement, with my own numbers</button><h3>Recipes</h3>' +
       (rec.length ? '<div class="ik-hits">' + rec.map(function (r) {
         return '<div class="ik-hit"><span class="ik-grow"><b>' + ikEsc(r.name) + "</b><br><small>" + (hide ? "" : ikNum(r.per100 && r.per100.kcal, 0) + " kcal per 100 g · ") + (r.ingredients || []).length + " ingredients</small></span>" +
           '<button class="ik-link" data-ren="' + r.id + '">Rename</button><button class="ik-link" data-delr="' + r.id + '" style="color:var(--ik-high)">Delete</button></div>'; }).join("") + "</div>" :
         '<p class="ik-small">None yet. When you snap a sauce or mixed dish and say what\'s in it, it\'s saved here.</p>') +
       "<h3>Foods</h3>" + (foods.length ? '<div class="ik-hits">' + foods.map(function (c) {
         return '<div class="ik-hit"><span class="ik-grow"><b>' + ikEsc(c.name) + "</b><br><small>" + (c.src === "label" ? "From a label" : c.est ? "Estimated" : "Worked out from ingredients") + (c.kind === "supplement" ? " · supplement" : "") + "</small></span>" +
-          '<button class="ik-link" data-delc="' + c.id + '" style="color:var(--ik-high)">Delete</button></div>'; }).join("") + "</div>" : '<p class="ik-small">None yet. Foods from labels and estimates show up here.</p>');
+          '<button class="ik-link" data-editc="' + c.id + '">Edit</button><button class="ik-link" data-delc="' + c.id + '" style="color:var(--ik-high)">Delete</button></div>'; }).join("") + "</div>" : '<p class="ik-small">None yet. Foods from labels and estimates show up here.</p>');
     sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
     function used(ref) { return (dd.getData().entries || []).some(function (e) { return e.items.some(function (i) { return i.ref === ref; }); }); }
     sh.querySelectorAll("[data-ren]").forEach(function (b) { b.addEventListener("click", function () {
@@ -9248,6 +9358,8 @@ function ikOpenRecipes() {
       var inp = row.querySelector("input"); inp.focus();
       row.querySelector("button").addEventListener("click", function () { var v = inp.value.trim().slice(0, 60); if (v) dd.update(function (dt) { dt.recipes.forEach(function (x) { if (x.id === id) x.name = v; }); }); paint(); });
     }); });
+    sh.querySelector("[data-newfood]").addEventListener("click", function () { ikOpenFoodEditor({ onDone: ikOpenRecipes, onCancel: ikOpenRecipes }); });
+    sh.querySelectorAll("[data-editc]").forEach(function (b) { b.addEventListener("click", function () { ikOpenFoodEditor({ id: b.getAttribute("data-editc"), onDone: ikOpenRecipes, onCancel: ikOpenRecipes }); }); });
     sh.querySelectorAll("[data-delr],[data-delc]").forEach(function (b) { b.addEventListener("click", function () {
       var id = b.getAttribute("data-delr") || b.getAttribute("data-delc"), isR = b.hasAttribute("data-delr"), ref = (isR ? "r:" : "c:") + id;
       if (used(ref)) { dd.ui.toast("That's used in your food list, so it stays. Remove those entries first.", 4500); return; }
@@ -9402,6 +9514,7 @@ const DD_PROGRAM = {
     "When they answer, call log_food with that time (24-hour) and day, then confirm in one sentence with the time. If they already said the time ('for lunch around noon'), don't ask again: log it. Lunch with no time means about 12:30, breakfast about 08:00, supper about 18:00 only if they say that word and give no time. " +
     "COOKING (V4): food-table numbers are for plain cooking. The program adds salt and cooking oil from the person's 'How I cook' settings (menu). For cooked foods, pass method in log_food (raw, boiled, grilled, baked, panfried, deepfried); oil is added as its own line. If the person mentions how something was cooked, use that. " +
     "DAYS WITH NOTHING LOGGED: the person can mark them as fasting or fill them with their average day (Trends, or Today on that day); those count in trends. " +
+    "OWN FOODS (V4): if a food or supplement's numbers are missing or wrong (e.g. their psyllium fibre isn't counting), use save_my_food to set its numbers (per serving or per 100 g). Changing one of their own foods (c:...) fixes every day they had it. They can also do it themselves: tap the food in their list, then 'Use my own numbers' or 'Edit what's in it'. " +
     "ADD AGAIN (V4): Today has one-tap chips and a ⚡ Add again list (Most often / Recent) for things the person has had before. " +
     "HYDRATION: water and other drinks count toward the day's drinks. Log water with log_water; other drinks with log_food, kind 'drink' (grams = mL). " +
     "For a sauce or mixed dish, ask what's in it if it matters, or use save_recipe. Never show an id: call things by their names. Targets: the person can change any target (set_target). " +
@@ -9652,6 +9765,49 @@ DD_PROGRAM.tools = [
         if (args.fast_hours >= 12 && args.fast_hours <= 24) { st.fasting = Object.assign({}, st.fasting, { goal: args.fast_hours }); said.push("fasting goal " + args.fast_hours + " h"); }
       });
       return said.length ? { ok: true, message: "Done: " + said.join(", ") + ". It's all in menu → Home screen & health." } : { ok: false, message: "Say what to turn on or off." };
+    } },
+  { name: "save_my_food", description: "Create, or change the numbers of, the person's own food, drink or supplement (for things the table lacks or gets wrong, e.g. psyllium fibre). Numbers are per serving or per 100 g; leave out what isn't in it. Changing a food changes every day it was had.",
+    params: { food: { type: "string", description: "To change one of their own foods: its id (c:...) or name. Leave empty to make a new one.", optional: true },
+      name: { type: "string", optional: true }, kind: { type: "string", enum: ["food", "drink", "supplement"], optional: true },
+      per: { type: "string", enum: ["serving", "100g"], description: "What the numbers are for", optional: true }, serving_g: { type: "number", description: "Weight of one serving in g or mL", optional: true },
+      kcal: { type: "number", optional: true }, protein: { type: "number", optional: true }, fibre: { type: "number", optional: true }, carb: { type: "number", optional: true },
+      sugar: { type: "number", optional: true }, fat: { type: "number", optional: true }, sat_fat: { type: "number", optional: true }, sodium_mg: { type: "number", optional: true },
+      potassium_mg: { type: "number", optional: true }, calcium_mg: { type: "number", optional: true }, iron_mg: { type: "number", optional: true }, magnesium_mg: { type: "number", optional: true },
+      vitamin_d_ug: { type: "number", optional: true }, vitamin_c_mg: { type: "number", optional: true }, b12_ug: { type: "number", optional: true }, folate_ug: { type: "number", optional: true },
+      caffeine_mg: { type: "number", optional: true },
+      add_now: { type: "boolean", description: "Also log it now", optional: true }, servings: { type: "number", description: "How many servings to log (per serving), or grams (per 100 g)", optional: true } },
+    run: function (args, ctx) {
+      var d = ctx.data, c = null;
+      if (args.food) {
+        var key = String(args.food).replace(/^c:/, ""), lw = String(args.food).toLowerCase();
+        c = d.customFoods.filter(function (x) { return x.id === key; })[0] || d.customFoods.filter(function (x) { return x.name.toLowerCase() === lw; })[0] ||
+            d.customFoods.filter(function (x) { return x.name.toLowerCase().indexOf(lw) >= 0; })[0] || null;
+        if (!c) return { ok: false, message: "None of their own foods is called '" + args.food + "'. Leave food empty to make a new one." };
+      }
+      var map = { kcal: "kcal", protein: "protein", fibre: "fibre", carb: "carb", sugar: "sugar", fat: "fat", sat_fat: "sat", sodium_mg: "na", potassium_mg: "k", calcium_mg: "ca", iron_mg: "fe",
+                  magnesium_mg: "mg", vitamin_d_ug: "vitD", vitamin_c_mg: "vitC", b12_ug: "b12", folate_ug: "folate", caffeine_mg: "caffeine" };
+      var basis = args.per === "100g" ? "100" : args.per === "serving" ? "serving" : c ? (c.perServing ? "serving" : "100") : "serving";
+      var old = c ? (c.perServing || c.per100 || {}) : {}, per = {};
+      IK_N.forEach(function (n) { per[n.k] = old[n.k] != null ? old[n.k] : null; });
+      var setAny = false;
+      Object.keys(map).forEach(function (a) { if (args[a] != null && isFinite(+args[a]) && +args[a] >= 0) { per[map[a]] = +args[a]; setAny = true; } });
+      if (!c && !setAny) return { ok: false, message: "Give at least one number, like the fibre." };
+      var nm = String(args.name || (c ? c.name : "")).trim().slice(0, 60); if (!nm) return { ok: false, message: "Give it a name." };
+      var food = { id: c ? c.id : ctx.ui.uid("c"), name: nm, kind: args.kind || (c ? c.kind : "food") || "food", src: "mine", used: new Date().toISOString() };
+      if (basis === "serving") { food.perServing = per; food.servingG = args.serving_g > 0 ? args.serving_g : (c && c.servingG) || null; } else food.per100 = per;
+      var e = null;
+      if (args.add_now) {
+        var t = ikNowTime(), amt = Number(args.servings) > 0 ? Number(args.servings) : (basis === "serving" ? 1 : 100);
+        e = { id: ctx.ui.uid("e"), day: ikToday(), time: t, part: ikPartOf(t), kind: food.kind, name: "", src: "helper",
+              items: [basis === "serving" ? { ref: "c:" + food.id, n: amt, name: nm } : { ref: "c:" + food.id, g: amt, name: nm }] };
+      }
+      ctx.update(function (dt) {
+        if (c) dt.customFoods = dt.customFoods.map(function (x) { return x.id === c.id ? food : x; }); else dt.customFoods.push(food);
+        if (e) dt.entries.push(e);
+      });
+      var shown = Object.keys(map).filter(function (a) { return per[map[a]] != null; }).map(function (a) { return IK_NBY[map[a]].label + " " + per[map[a]] + " " + IK_NBY[map[a]].unit; });
+      return { ok: true, message: (c ? "Changed" : "Saved") + " " + nm + " (id c:" + food.id + "), per " + (basis === "serving" ? "serving" + (food.servingG ? " of " + food.servingG + " g" : "") : "100 g") + ": " + shown.join(", ") + "." +
+        (c && ikFoodUsed(dd.getData(), c.id) ? " This changes every day they had it." : "") + (e ? " Also logged it now." : "") };
     } },
   { name: "find_food", description: "Search the food table and the person's recipes and foods by words. Returns ids and usual measures.",
     params: { query: { type: "string" } },
