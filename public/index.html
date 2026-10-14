@@ -30,7 +30,14 @@
   Removing a food from a meal (its ✕) now saves at once, with Undo; tap any nutrient in "Every nutrient" to see where it came from.
   📊 My home screen charts: pick the main ring, the charts under it and the small bars (default: the usual look).
   ⚡ Add again: one-tap chips on Today for the things you have most, and a list with Most often / Recent tabs.
-  Platform change, marked "PLATFORM CHANGE (2026-10-13 V4)": dd.helper dictation (above).
+  Years of data: big saved values live in IndexedDB (moved across from browser storage on first open); each day's
+  totals are kept until that day or your foods change; live sync keeps fingerprints instead of a second full copy.
+  Backups are compact, can be any size, and "✓ Check a backup file" says what a file holds and that it will restore.
+  Opened from a file on the computer: a one-time heads-up that the browser keeps the data, and backup nudges every 2 weeks.
+  🥗 How I like to eat (whole foods first / low sugar, protein first / plant-based, plus their own words): food ideas
+  are whole foods only (never juice, sweet drinks or processed food) and DigiBot follows the person's style.
+  Platform changes, marked "PLATFORM CHANGE (2026-10-13 V4)": dd.helper dictation, dd.store IndexedDB, dd.sync
+  fingerprinted working copy, dd.backup (compact files, Check a backup file, file-copy warning).
   0.3.0 (V3 handoff, Oran 2026-10-13): the home screen as an instrument cluster. Menu → Home screen & health turns
   on fasting tracking, a 3-day fast reminder, health conditions and medicines (each adds its own gauges and food
   flags) and hides any gauge. New everyday gauges: time since you last ate, meal balance, blood sugar load.
@@ -115,9 +122,9 @@ body{margin:0;font-family:var(--dd-font);background:var(--dd-bg);color:var(--dd-
 .dd-notice .dd-btnrow{margin:0}
 
 /* sheets (modal dialogs) */
-.dd-overlay{position:fixed;inset:0;background:rgba(17,24,39,.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:18px}
+.dd-overlay{position:fixed;inset:0;height:100%;height:100dvh;background:rgba(17,24,39,.55);z-index:50;display:flex;align-items:center;justify-content:center;padding:18px}
 .dd-overlay-dark{background:rgba(8,10,16,.85)}
-.dd-sheet{background:#fff;border-radius:18px;max-width:520px;width:100%;padding:24px;max-height:92vh;overflow:auto}
+.dd-sheet{background:#fff;border-radius:18px;max-width:520px;width:100%;padding:24px;max-height:92vh;max-height:calc(100dvh - 24px - env(safe-area-inset-top));overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 .dd-sheet h2{margin:0 0 8px;font-size:1.25rem}
 .dd-sheet pre{white-space:pre-wrap;word-break:break-word;font-size:.78rem;background:#f8fafc;border:1px solid var(--dd-line);
               border-radius:10px;padding:10px;max-height:50vh;overflow:auto;margin:8px 0 0}
@@ -380,7 +387,7 @@ body.dd-has-side{padding-right:360px}
 .dd-helper-inline{border-radius:var(--dd-radius);padding:16px;margin:0 0 14px;box-shadow:var(--dd-shadow);border:2px solid var(--dd-brand-soft-d)}
 .dd-helper-inline .dd-helper-msgs{max-height:340px}
 /* bubble: a labelled corner button that opens a panel */
-.dd-helper-bubble{display:none;position:fixed;right:16px;bottom:calc(84px + var(--dd-host-bottom,0px) + env(safe-area-inset-bottom));width:min(380px,calc(100vw - 32px));height:min(560px,75vh);
+.dd-helper-bubble{display:none;position:fixed;right:16px;bottom:calc(84px + var(--dd-host-bottom,0px) + env(safe-area-inset-bottom));width:min(380px,calc(100vw - 32px));height:min(560px,75vh);height:min(560px,75dvh);
                   z-index:30;border-radius:18px;padding:14px;box-shadow:0 12px 36px rgba(0,0,0,.25);border:1px solid var(--dd-line)}
 .dd-helper-bubble.open{display:flex}
 .dd-helper-bubble .dd-helper-msgs{flex:1;min-height:0}
@@ -857,7 +864,12 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 .ik-tgt{display:grid;grid-template-columns:minmax(0,1fr) 92px 86px;gap:6px 8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--ik-line);font-size:14px}
 .ik-tgt input{width:100%;font:inherit;font-size:15px;border:1px solid #d2d2d7;border-radius:10px;padding:6px 8px;text-align:right;min-height:38px}
 .ik-tgt .ik-rec{color:var(--ik-ink2);text-align:right;font-size:13px}
-.ik-two{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.ik-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 10px}
+.ik-two>*{min-width:0}
+/* iPhone Safari draws time/date boxes wider and taller than other fields: keep them in their column (V4 fix, 2026-10-14) */
+.ik-input{box-sizing:border-box;min-width:0;max-width:100%}
+input[type=time].ik-input,input[type=date].ik-input{-webkit-appearance:none;appearance:none;display:block;height:46px;line-height:22px;text-align:left}
+input[type=time].ik-input::-webkit-date-and-time-value,input[type=date].ik-input::-webkit-date-and-time-value{text-align:left;margin:0}
 .ik-about p{margin:0 0 10px}
 .ik-photo-pick{display:flex;flex-direction:column;align-items:center;gap:10px;background:#fff;border-radius:22px;padding:26px 14px;text-align:center;margin:0 0 12px}
 
@@ -1178,9 +1190,71 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var s = ls(); if (!s) return false;
     try { s.setItem("dd__probe", "1"); s.removeItem("dd__probe"); return true; } catch (e) { return false; }
   };
-  store.get = function (key) { var s = ls(); if (!s) return null; try { return s.getItem(key); } catch (e) { return null; } };
+  /* PLATFORM CHANGE (2026-10-13 V4, Oran: a buyer may run one copy for years and never update it).
+     Browsers give a website's small storage (localStorage) only about 5 MB, which years of data would fill.
+     The big saved values (a program's data, its recovery copy and live sync's working copy) now live in
+     IndexedDB, the browser's database, which holds hundreds of MB. Everything else stays where it was.
+     - store.ready() runs once before the program starts: it opens the database and reads the big values into
+       memory, so store.get/set stay instant. Each set is written to the database straight away.
+     - Data already saved the old way is moved across on first open, and only removed from the old place once
+       the database has it. If a write ever fails, that value goes back to the old place, which wins next time.
+     - If a browser has no IndexedDB, or it doesn't answer within 4 seconds, everything works as before. */
+  var BIG = /_(data|data_recovery|sync_base)_v1$/;
+  var idb = null, cache = {}, pendingW = {}, writing = {};
+  store.idbState = "not started";
+  store.isBig = function (k) { return BIG.test(k); };
+  function idbReq(fn) {
+    return new Promise(function (res, rej) {
+      try { var tx = idb.transaction("kv", "readwrite"); fn(tx.objectStore("kv")); tx.oncomplete = function () { res(); }; tx.onerror = tx.onabort = function () { rej(tx.error || new Error("write failed")); }; }
+      catch (e) { rej(e); }
+    });
+  }
+  function flush(k) {
+    if (writing[k] || !(k in pendingW) || !idb) return;
+    var v = pendingW[k]; delete pendingW[k]; writing[k] = true;
+    idbReq(function (st) { if (v == null) st.delete(k); else st.put(v, k); }).then(function () {
+      writing[k] = false; var s = ls(); if (s) try { s.removeItem(k); } catch (e) {}
+      flush(k);
+    }, function (e) {
+      writing[k] = false; dd.errors.record("store.idb", e); store.idbState = "on, a write failed";
+      var s = ls(); if (s && v != null) try { s.setItem(k, v); } catch (x) {}   // keep it safe the old way
+    });
+  }
+  store.ready = function () {
+    if (!window.indexedDB) { store.idbState = "not available"; return Promise.resolve(); }
+    var settled = false;
+    var open = new Promise(function (res, rej) {
+      try {
+        var rq = indexedDB.open("digidoughnut", 1);
+        rq.onupgradeneeded = function () { rq.result.createObjectStore("kv"); };
+        rq.onsuccess = function () { res(rq.result); };
+        rq.onerror = function () { rej(rq.error); };
+        rq.onblocked = function () { rej(new Error("database blocked")); };
+      } catch (e) { rej(e); }
+    }).then(function (db) {
+      return new Promise(function (res, rej) {
+        var out = {}, rq = db.transaction("kv", "readonly").objectStore("kv").openCursor();
+        rq.onsuccess = function () { var c = rq.result; if (c) { out[c.key] = c.value; c.continue(); } else res({ db: db, all: out }); };
+        rq.onerror = function () { rej(rq.error); };
+      });
+    }).then(function (x) {
+      if (settled) { try { x.db.close(); } catch (e) {} return; }
+      settled = true; idb = x.db; cache = x.all; store.idbState = "on";
+      var s = ls(), ks = [];
+      if (s) { try { for (var i = 0; i < s.length; i++) { var k = s.key(i); if (BIG.test(k)) ks.push(k); } } catch (e) {} }
+      ks.forEach(function (k) { var v = s.getItem(k); if (v != null) { cache[k] = v; pendingW[k] = v; flush(k); } });   // the old place wins: it's newer
+      if (ks.length) store.moved = ks.length;
+    }, function (e) { if (!settled) { settled = true; store.idbState = "not available"; dd.errors.record("store.idb", e); } });
+    var wait = new Promise(function (res) { setTimeout(function () { if (!settled) { settled = true; store.idbState = "too slow, using browser storage"; } res(); }, 4000); });
+    return Promise.race([open, wait]);
+  };
+
+  store.get = function (key) {
+    if (idb && BIG.test(key)) return key in cache ? cache[key] : null;
+    var s = ls(); if (!s) return null; try { return s.getItem(key); } catch (e) { return null; } };
   /* returns {ok:true} or {ok:false, reason:"storage_full"|"storage_blocked"} */
   store.set = function (key, value) {
+    if (idb && BIG.test(key)) { value = String(value); cache[key] = value; pendingW[key] = value; flush(key); return { ok: true }; }
     var s = ls(); if (!s) return { ok: false, reason: "storage_blocked" };
     try { s.setItem(key, value); return { ok: true }; }
     catch (e) {
@@ -1189,7 +1263,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       return { ok: false, reason: full ? "storage_full" : "storage_blocked" };
     }
   };
-  store.remove = function (key) { var s = ls(); if (s) try { s.removeItem(key); } catch (e) {} };
+  store.remove = function (key) {
+    if (idb && BIG.test(key)) { delete cache[key]; pendingW[key] = null; flush(key); }
+    var s = ls(); if (s) try { s.removeItem(key); } catch (e) {} };
   store.getJSON = function (key) { var t = store.get(key); if (t == null) return null; try { return JSON.parse(t); } catch (e) { return undefined; } };
   store.setJSON = function (key, value) { return store.set(key, JSON.stringify(value)); };
 
@@ -1263,6 +1339,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   /* Nearly full (over 80%): warn once per visit, before a save actually fails. */
   var warnedFull = false;
   store.checkRoom = function () {
+    if (idb) return;   // V4: the big data is in IndexedDB, which has plenty of room
     if (warnedFull || store.usedChars() < store.LIMIT * 0.8) return;
     warnedFull = true;
     dd.errors.record("store", "browser storage over 80% full: " + store.usedChars() + " characters");
@@ -1857,6 +1934,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
              " · screen " + screen.width + "×" + screen.height + " · " + (navigator.onLine ? "online" : "offline"));
     out.push(navigator.userAgent);
     out.push("--- Storage ---");
+    out.push("Big data kept in: " + (dd.store.idbState === "on" || /^on/.test(dd.store.idbState) ? "IndexedDB (" + dd.store.idbState + ")" : "browser storage (IndexedDB " + dd.store.idbState + ")") + (dd.store.moved ? " · moved " + dd.store.moved + " value(s) across this visit" : ""));
     out.push("Saving works: " + (dd.store.available() ? "yes" : "NO") +
              " · keep-storage request: " + dd.store.persisted +
              (p ? " · data " + dd.store.dataBytes(p.id) + " bytes" + (dd.isExample() ? " (example)" : "") : "") +
@@ -5379,12 +5457,30 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   /* base: what the database last showed us. pend: paths this device sent that the database hasn't
      confirmed yet. Both are kept on the device, so a change made offline survives a reload
      (the Firebase library forgets unsent writes when the page closes). */
+  /* PLATFORM CHANGE (2026-10-13 V4): the working copy keeps a short fingerprint of each item instead of a
+     second full copy of the data. Merging only ever asks "is this the same as before?", which a fingerprint
+     answers, so the result is identical and the saved copy is a fraction of the size. Old copies convert on load. */
+  function H(v) {
+    if (v == null) return v;
+    v = String(v); var h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (var i = 0, ch; i < v.length; i++) { ch = v.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return "#" + (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36) + v.length.toString(36);
+  }
+  sync._H = H;
+  function hashMap(m) { if (!m) return m; var o = {}; Object.keys(m).forEach(function (p) { o[p] = H(m[p]); }); return o; }
   function loadBase() {
     var b = dd.store.getJSON(key("sync_base")), mine = b && typeof b === "object" && b.ledger === ledger();
     base = mine ? b.flat : null; pend = mine && b.pend && typeof b.pend === "object" ? b.pend : {};
     stamps = mine && b.stamps && typeof b.stamps === "object" ? b.stamps : {};
+    if (mine && b.h !== 1) {   // an older full copy: turn it into fingerprints
+      base = hashMap(base);
+      Object.keys(stamps).forEach(function (p) { if (stamps[p]) stamps[p].v = H(stamps[p].v); });
+      saveBase();
+    }
   }
-  function saveBase() { dd.store.setJSON(key("sync_base"), { ledger: ledger(), flat: base, pend: pend, stamps: stamps }); }
+  function saveBase() { dd.store.setJSON(key("sync_base"), { h: 1, ledger: ledger(), flat: base, pend: pend, stamps: stamps }); }
   /* When this device last changed each path (Firebase's clock, so a wrong device clock doesn't matter). */
   function clock() { return Date.now() + (timeOffset || 0); }
   function tkey(p) { return p.replace(/\//g, "|"); }
@@ -5460,9 +5556,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     for (var i = 0; i < ka.length; i++) if (a[ka[i]] !== b[ka[i]]) return false;
     return true;
   }
-  function diff(from, to) {
+  function diff(from, to) {   // from: fingerprints, to: full values
     var u = {}, n = 0;
-    Object.keys(to).forEach(function (p) { if (from[p] !== to[p]) { u[p] = to[p]; n++; } });
+    Object.keys(to).forEach(function (p) { if (from[p] !== H(to[p])) { u[p] = to[p]; n++; } });
     Object.keys(from).forEach(function (p) { if (!(p in to)) { u[p] = null; n++; } });
     return n ? u : null;
   }
@@ -5476,8 +5572,8 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     Object.keys(all).forEach(function (p) {
       var v;
       if (!b) v = p in r ? r[p] : l[p];                                     // first join: union, database wins
-      else if (l[p] === b[p]) v = r[p];                                     // we didn't touch it: take theirs
-      else if (real && r[p] !== real[p] && (rt[p] || 0) > (lt[p] || 0)) v = r[p];   // both changed it: theirs is newer
+      else if (H(l[p]) === b[p]) v = r[p];                                  // we didn't touch it: take theirs (b holds fingerprints)
+      else if (real && H(r[p]) !== real[p] && (rt[p] || 0) > (lt[p] || 0)) v = r[p];   // both changed it: theirs is newer
       else v = l[p];                                                        // we changed it: keep ours
       if (v !== undefined && v !== null) out[p] = v;
     });
@@ -5750,7 +5846,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     dd.ui.clearNotice("sync-newer");
     var example = dd.isExample(), local = localFlat();
     // Example data never travels, and an empty database doesn't replace example data.
-    if (example && !Object.keys(remote).length) { base = remote; saveBase(); return true; }
+    if (example && !Object.keys(remote).length) { base = hashMap(remote); saveBase(); return true; }
     var rt = {};
     Object.keys((v && v.times) || {}).forEach(function (k) { if (typeof v.times[k] === "number") rt[k.replace(/\|/g, "/")] = v.times[k]; });
     var lt = {}; Object.keys(stamps).forEach(function (p) { if (stamps[p] && typeof stamps[p].t === "number") lt[p] = stamps[p].t; });
@@ -5764,17 +5860,17 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       var old = sync.fromFlat(merged);
       try { if (old) merged = sync.toFlat(dd.migrateData(program, old, rschema)); } catch (e) { dd.errors.record("sync.migrate", e); return false; }
     }
-    if (!example && same(merged, local)) { base = remote; saveBase(); if (!same(remote, local)) schedulePush(0); return true; }
+    if (!example && same(merged, local)) { base = hashMap(remote); saveBase(); if (!same(remote, local)) schedulePush(0); return true; }
     var next = sync.fromFlat(merged);
     if (!next || !program.validateData(next)) {
       fail("applying", "the database holds data this program can't read");
       dd.ui.toast("A change from your other device couldn't be read, so it was skipped.");
-      base = remote; saveBase();
+      base = hashMap(remote); saveBase();
       return true;
     }
     dd.replaceData(next, { source: "sync", example: false });
     diag.applied++;
-    base = remote; saveBase();
+    base = hashMap(remote); saveBase();
     if (!same(remote, merged)) schedulePush(0);
     return true;
   }
@@ -5785,7 +5881,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     pushTimer = setTimeout(pushNow, ms == null ? sync.limits.debounce : ms);
   }
   /* Remember when this device changed a path (kept until the value changes again). */
-  function stamp(p, v) { if (!stamps[p] || stamps[p].v !== v) stamps[p] = { t: clock(), v: v }; }
+  function stamp(p, v) { var h = H(v); if (!stamps[p] || stamps[p].v !== h) stamps[p] = { t: clock(), v: h }; }
   function pushNow() {
     pushTimer = null;
     if (!ledgerRef || state !== "on" || dd.isExample()) return;
@@ -5805,7 +5901,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       pend[p] = seq; stamp(p, local[p]);
       u["times/" + tkey(p)] = stamps[p].t;
     });
-    base = local; saveBase();
+    base = hashMap(local); saveBase();
     diag.pushes++;
     fb.D.update(ledgerRef, u).then(function () {
       Object.keys(u).forEach(function (p) { if (pend[p] === seq) delete pend[p]; });
@@ -5994,7 +6090,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var p = dd.getProgram(), out = { dd: 1, kind: "backup", program: p.id, name: p.name, schemaVersion: p.schemaVersion,
                                      savedAt: new Date().toISOString(), data: dd.getData() };
     var sp = syncPart(); if (sp) out.sync = sp;
-    return JSON.stringify(out, null, 1);
+    return JSON.stringify(out);   // V4: no spacing, so years of data stay a small file
   };
 
   /* Download the file. Returns false (and says why) when there's nothing of the buyer's to keep. */
@@ -6065,16 +6161,30 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   };
 
   /* Open the file picker, then restore. */
-  backup.pick = function () {
+  backup.pick = function (onText) {
     var input = document.createElement("input");
     input.type = "file"; input.accept = ".json,application/json"; input.style.display = "none";
     input.addEventListener("change", function () {
       var f = input.files && input.files[0]; input.remove();
       if (!f) return;
-      if (f.size > 5 * 1024 * 1024) { var x = dd.errors.friendly("backup_bad"); dd.ui.toast(x.title, 5000); return; }
-      f.text().then(backup.restoreText, function (e) { dd.errors.record("backup.file", e); dd.ui.toast("That file couldn't be opened.", 4000); });
+      if (f.size > 200 * 1024 * 1024) { var x = dd.errors.friendly("backup_bad"); dd.ui.toast(x.title, 5000); return; }   // V4: was 5 MB, too small for years of data
+      f.text().then(onText || backup.restoreText, function (e) { dd.errors.record("backup.file", e); dd.ui.toast("That file couldn't be opened.", 4000); });
     });
     document.body.appendChild(input); input.click();
+  };
+
+  /* V4 (Oran, 2026-10-13: "make sure they know the backups will actually restore"): read a backup file and
+     say what's in it, without changing anything. */
+  backup.check = function () {
+    backup.pick(function (text) {
+      var r = backup.read(text), p = dd.getProgram();
+      if (!r.ok) { dd.ui.notice("backupcheck", "✗ That file won't restore. " + r.title + " " + (r.help || ""), "warn"); return; }
+      var when = r.savedAt && !isNaN(Date.parse(r.savedAt)) ? new Date(r.savedAt).toLocaleString() : "an unknown date";
+      var what = ""; try { what = p.describeData ? String(p.describeData(r.data) || "") : ""; } catch (e) { dd.errors.record("backup.describe", e); }
+      last.checked = new Date().toLocaleTimeString() + " ok";
+      dd.ui.notice("backupcheck", "✓ This backup is good and will restore. Saved " + when + (what ? ": " + what : "") + ". Nothing was changed.", "info",
+        [{ label: "OK", primary: true, onClick: function () { dd.ui.clearNotice("backupcheck"); } }]);
+    });
   };
 
   /* ---------- "Backup & new versions" (footer, sync sheet) ----------
@@ -6096,7 +6206,9 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       (on ? '<p class="dd-note">With live sync on, the backup also holds your live sync address, so restoring it on a new or cleared device reconnects everything. <b>Keep it private</b>: anyone with the file could open your ' + esc(thing) + '.</p>' : "") +
       '<p class="dd-note"><b>Careful when clearing your browser:</b> clearing "cookies and site data" (or "history and website data") removes your ' + esc(thing) + ', your access code and your live sync address from this device. ' +
         (on ? 'Your live copy stays safe in your own Firebase; restore a recent backup to reconnect.' : 'Download a backup first.') + '</p>' +
-      '<div class="dd-btnrow"><button class="dd-btn" data-down>⬇ Download a backup</button><button class="dd-btn ghost" data-up>Restore from a backup</button></div>' +
+      (dd.env.isFile ? '<p class="dd-status show warn"><b>You opened ' + esc(p.name) + ' from a file on this computer.</b> Your ' + esc(thing) + ' is kept by this browser, not in the file. If you move, rename or download the file again, or open it in another browser, it may open empty. Back up every week or two, or use ' + esc(p.name) + ' from its web address (Where it lives).</p>' : "") +
+      '<p class="dd-note"><b>Backups restore everything:</b> every meal and day, your own foods, recipes, targets and settings, on this device or any other. Tap <b>Check a backup file</b> any time to make sure one is good. It changes nothing.</p>' +
+      '<div class="dd-btnrow"><button class="dd-btn" data-down>⬇ Download a backup</button><button class="dd-btn ghost" data-up>Restore from a backup</button><button class="dd-btn ghost" data-check>✓ Check a backup file</button></div>' +
       '<h3 class="dd-sub">Moving to a new version?</h3>' +
       '<ol class="dd-home-steps">' +
         '<li><b>Same place, same name:</b> upload the new file over the old one, keeping its file name. Your ' + esc(thing) + ' just stays. This is the easiest way.</li>' +
@@ -6111,6 +6223,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
     sh.querySelector("[data-down]").addEventListener("click", function () { backup.download(); });
     sh.querySelector("[data-up]").addEventListener("click", function () { dd.ui.closeSheet(); backup.pick(); });
+    sh.querySelector("[data-check]").addEventListener("click", function () { dd.ui.closeSheet(); backup.check(); });
     var mv = sh.querySelector("[data-move]"); if (mv) mv.addEventListener("click", function () { dd.move.open(); });
     var sy = sh.querySelector("[data-sync]"); if (sy) sy.addEventListener("click", function () { dd.ui.closeSheet(); dd.setup.open("sync"); });
   };
@@ -6119,6 +6232,17 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   var NUDGE_MS = 30 * 24 * 3600 * 1000;
   backup.nudge = function () {
     var p = dd.getProgram(); if (!p || dd.isExample() || synced() || (dd.sync && dd.sync.isOn && dd.sync.isOn())) return;
+    /* V4: opened from a file on the computer. The data belongs to the browser, not the file, so a moved or
+       re-downloaded file can open empty. Say so once, and nudge every 2 weeks instead of every month. */
+    var NUDGE_MS = dd.env.isFile ? 14 * 24 * 3600 * 1000 : 30 * 24 * 3600 * 1000;
+    var fk = dd.store.programKey(p.id, "file_warned");
+    if (dd.env.isFile && !dd.store.get(fk)) {
+      dd.ui.notice("backup", "Heads up: you opened " + p.name + " from a file on this computer. Your " + (p.dataLabel || "numbers") + " is kept by this browser, not in the file, so moving or re-downloading the file can open it empty. Download a backup every week or two: it restores everything, anywhere.", "warn", [
+        { label: "Download a backup", primary: true, onClick: function () { dd.store.set(fk, "1"); dd.ui.clearNotice("backup"); backup.download(); } },
+        { label: "Got it", onClick: function () { dd.store.set(fk, "1"); dd.ui.clearNotice("backup"); } }
+      ]);
+      return;
+    }
     var k = dd.store.programKey(p.id, "backup_nudge"), snooze = Number(dd.store.get(k)) || 0, last = backup.lastMade();
     if (!snooze) { dd.store.set(k, String(Date.now())); return; }   // first visit with real data: start the clock, don't nag
     if (Date.now() - snooze < NUDGE_MS || (last && Date.now() - last.getTime() < NUDGE_MS)) return;
@@ -6134,7 +6258,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     note: function () { return synced() ? "Backed up live in your own Firebase" : "Saved on this device only"; },
     run: function () { backup.open(); } });
 
-  if (dd.diag) dd.diag.addSection("Backup", function () { return ["Backup downloaded this visit: " + last.made + " · restored this visit: " + last.restored]; });
+  if (dd.diag) dd.diag.addSection("Backup", function () { return ["Backup downloaded this visit: " + last.made + " · restored this visit: " + last.restored + " · checked: " + (last.checked || "-")]; });
 })();
 
 /* ---- dd.move.js ---- */
@@ -7179,6 +7303,30 @@ function ikOpenCooking() {
   paint();
 }
 
+/* V4: how the person likes to eat. Steers food ideas and what the helper suggests. */
+function ikOpenEating() {
+  var sh = dd.ui.sheet("", { sticky: false }); sh.classList.add("ik-sheet");
+  var name = dd.helper ? dd.helper.name() : "DigiBot";
+  function save(fn) { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings); var e = Object.assign({}, dt.settings.eating || {}); fn(e); dt.settings.eating = e; }, { render: false }); }
+  function paint() {
+    var st = ikStyle(dd.getData());
+    sh.innerHTML = '<div class="ik-sheettop"><h2>How I like to eat</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+      '<p class="ik-small" style="margin-top:0">This steers the food ideas in Advice and what ' + ikEsc(name) + ' suggests. ' + ikEsc(name) + ' never suggests juice, pop or sweet drinks to fill a gap.</p>' +
+      '<div class="ik-card">' + IK_STYLES.map(function (x) {
+        return '<button class="ik-chip" data-style="' + x.k + '" aria-pressed="' + (st.style === x.k) + '" style="display:block;width:100%;text-align:left;margin:0 0 8px;white-space:normal;height:auto;padding:10px 14px;border-radius:14px"><b>' + ikEsc(x.label) + '</b><br><span style="font-size:13px;color:inherit;opacity:.8">' + ikEsc(x.note) + "</span></button>";
+      }).join("") + "</div>" +
+      '<h3 class="ik-sechead">Anything else ' + ikEsc(name) + ' should know?</h3><div class="ik-card">' +
+      '<textarea class="ik-input" data-notes rows="4" maxlength="400" placeholder="Like: no dairy, I eat two meals a day, I follow a doctor or coach I trust and want ideas that fit their advice.">' + ikEsc(st.notes) + "</textarea>" +
+      '<p class="ik-small" style="margin:8px 0 0">' + ikEsc(name) + ' reads this before every food idea. Your targets still come from health guidelines. You can change them in Targets.</p></div>' +
+      '<button class="ik-btn wide" data-close>Done</button>';
+    sh.querySelectorAll("[data-style]").forEach(function (b) { b.addEventListener("click", function () { var v = b.getAttribute("data-style"); save(function (e) { e.style = v; }); paint(); }); });
+    var ta = sh.querySelector("[data-notes]");
+    ta.addEventListener("change", function () { var v = ta.value.trim().slice(0, 400); save(function (e) { e.notes = v; }); });
+    sh.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", function () { var v = ta.value.trim().slice(0, 400); if (v !== ikStyle(dd.getData()).notes) save(function (e) { e.notes = v; }); dd.ui.closeSheet(); dd.render && dd.render(); }); });
+  }
+  paint();
+}
+
 /* ===== V4: days with nothing logged — mark as fasting, or fill with the person's average day =====
    Stored as their own list (dayFills, one item per day) so they sync like entries. Real entries always win. */
 function ikFillMap(d) { var m = {}; (d.dayFills || []).forEach(function (f) { m[f.day] = f.kind; }); return m; }
@@ -7191,7 +7339,7 @@ function ikAvgDay(d) {
     var days = Object.keys(byDay), n = days.length; if (n < 3) return null;
     var t = ikTotals([], d);
     days.forEach(function (day) {
-      var x = ikTotals(byDay[day], d);
+      var x = ikDayTotals(d, day, byDay[day]);
       IK_N.forEach(function (nt) { t.v[nt.k] += x.v[nt.k] / n; t.miss[nt.k] += x.miss[nt.k] / n; });
       t.drinksMl += x.drinksMl / n; t.items += x.items / n;
     });
@@ -7255,7 +7403,25 @@ function ikTotals(entries, d) {
   t.alcoholDrinks = t.v.alcohol / IK_EDITION.standardDrinkG;
   return t;
 }
-function ikEntriesOn(d, day) { return (d.entries || []).filter(function (e) { return e.day === day; }); }
+/* V4: entries grouped by day once per change, instead of scanning every entry for every day shown. */
+function ikByDay(d) {
+  return ikMemo("byday", function () { var by = {}; (d.entries || []).forEach(function (e) { (by[e.day] = by[e.day] || []).push(e); }); return by; });
+}
+function ikEntriesOn(d, day) { return (ikByDay(d)[day] || []).slice(); }
+/* V4: each day's totals (and each meal's energy) are kept until that day or the foods change, so years of
+   history stay as quick as a week. Anything that changes the numbers (your foods, recipes, how you cook)
+   starts the totals over. */
+var IK_DC = { key: null, days: {}, kcal: {} };
+function ikDCReset(d) {
+  var k = ikMemo("foodkey", function () { return JSON.stringify([d.customFoods || [], d.recipes || [], (d.settings && d.settings.cooking) || null]); });
+  if (IK_DC.key !== k) IK_DC = { key: k, days: {}, kcal: {} };
+}
+function ikDayTotals(d, day, es) {
+  ikDCReset(d);
+  var sig = JSON.stringify(es), c = IK_DC.days[day];
+  if (c && c.sig === sig) return c.t;
+  var t = ikTotals(es, d); IK_DC.days[day] = { sig: sig, t: t }; return t;
+}
 function ikEntryKcal(e, d) { return ikTotals([e], d).v.kcal; }
 function ikEntryName(e, d) {
   if (e.name) return e.name;
@@ -7335,11 +7501,10 @@ function ikTargetWarning(d, k, amount) {
 /* ---------- patterns over days: found by code, explained by the helper only when asked ---------- */
 function ikDaysBack(endDay, n) { var out = []; for (var i = n - 1; i >= 0; i--) out.push(ikAddDays(endDay, -i)); return out; }
 function ikDaySeries(d, days) {
-  var byDay = {}, fills = ikFillMap(d);
-  (d.entries || []).forEach(function (e) { (byDay[e.day] = byDay[e.day] || []).push(e); });
+  var byDay = ikByDay(d), fills = ikFillMap(d);
   return days.map(function (day) {
     var es = byDay[day] || [];
-    if (es.length) return { day: day, logged: true, t: ikTotals(es, d) };
+    if (es.length) return { day: day, logged: true, t: ikDayTotals(d, day, es) };
     if (fills[day] === "fast") return { day: day, logged: true, filled: "fast", t: ikTotals([], d) };   // V4: a fasting day counts as zero
     if (fills[day] === "avg") { var a = ikAvgDay(d); if (a) return { day: day, logged: true, filled: "avg", t: a }; }
     return { day: day, logged: false, t: ikTotals([], d) };
@@ -7373,27 +7538,49 @@ function ikPatterns(d, endDay, n) {
 /* Foods from the table that give the most of a nutrient in one usual serving. Treats left out. */
 var IK_NOT_IDEAS = /^(chips|tortilla_chips|pretzels|cola|diet_cola|ginger_ale|energy_drink|sports_drink|beer|beer_light|wine_red|wine_white|spirits|cake_choc|cookie_choc|donut|ice_cream|chocolate_milk_bar|fries|poutine|pizza|pizza_pepperoni|burger|cheeseburger|hot_dog|salami|bacon|sausage|sub|sugar|honey|jam|maple_syrup|ramen|mayo|dressing_\w+|butter|margarine|coconut_oil|canola_oil|olive_oil|gravy|soy_sauce|protein_shake|espresso|coffee|latte|tea\w*|oats_dry|mac_cheese|chicken_nuggets|fish_sticks|croissant|muffin_blue|popcorn_micro|granola_bar|ketchup|bbq_sauce|hot_sauce|mustard|pickle|salsa|egg_raw)$/;
 var IK_IDEAS_CACHE = {};
+/* V4 (Oran, 2026-10-13: "DigiBot suggested orange juice for vitamin C. That's a horrible suggestion.")
+   Food ideas are whole foods only: never juice, smoothies, sweet drinks, sweet cereals, processed meats or
+   mixed dishes, even when they're high in the nutrient. The person's eating style narrows them further. */
+var IK_NOT_IDEAS_V4 = /^(oj|apple_juice|smoothie|milk_choc|hot_chocolate|yogurt_fruit|cereal_corn|cheerios|granola|pancake|waffle|bread_white|toast_white|bagel|tortilla_flour|roll_burger|applesauce|ham|deli_turkey|fish_sticks|baked_beans|egg_noodles|rice_noodles|pasta|couscous|rice_white|mashed|hash_browns|lasagna|spaghetti_meat|chili|stir_fry|fried_rice|sushi|soup_\w+|beef_stew|shepherds_pie|caesar_salad|greek_salad|sandwich_\w+|burrito|taco|coleslaw|pasta_sauce|pesto|cream_\w+|sour_cream|cream_cheese|water|sparkling)$/;
+var IK_ANIMAL = /^(egg\w*|milk\w*|cream\w*|sour_cream|yogurt\w*|cheddar|mozzarella|parmesan|cottage|cream_cheese|feta|butter|chicken\w*|turkey|beef\w*|steak|roast_beef|pork\w*|bacon|ham|sausage|hot_dog|salami|deli_turkey|lamb|salmon\w*|tuna_canned|cod|tilapia|shrimp|sardines|fish_sticks|honey|ice_cream)$/;
+var IK_STYLES = [
+  { k: "whole", label: "Whole foods first", note: "Real food over juice, sweet drinks and processed food. Fruit whole, not juiced." },
+  { k: "lowsugar", label: "Low sugar, protein first", note: "Protein at every meal, plenty of fibre, little sugar, starch kept modest. Ideas skip sweeter fruit." },
+  { k: "plant", label: "Plant-based", note: "Ideas only from plants: beans, lentils, tofu, nuts, seeds, vegetables, fruit and whole grains." }
+];
+function ikStyle(d) { var st = (d && d.settings && d.settings.eating) || {}; return { style: IK_STYLES.some(function (x) { return x.k === st.style; }) ? st.style : "whole", notes: typeof st.notes === "string" ? st.notes.slice(0, 400) : "" }; }
 function ikIdeas(k, n) {
-  if (IK_IDEAS_CACHE[k]) return IK_IDEAS_CACHE[k].slice(0, n || 3);
-  var list = IK_FOODLIST.filter(function (f) { return !IK_NOT_IDEAS.test(f.key) && f.n[k] != null; }).map(function (f) {
+  var style = ikStyle(dd.getData ? dd.getData() : null).style, ck = style + ":" + k;
+  if (IK_IDEAS_CACHE[ck]) return IK_IDEAS_CACHE[ck].slice(0, n || 3);
+  var list = IK_FOODLIST.filter(function (f) {
+    if (IK_NOT_IDEAS.test(f.key) || IK_NOT_IDEAS_V4.test(f.key) || f.n[k] == null) return false;
+    if (style === "plant" && IK_ANIMAL.test(f.key)) return false;
+    if (style === "lowsugar" && k !== "sugar" && (f.n.sugar || 0) > 10) return false;
+    return true;
+  }).map(function (f) {
     // a usual portion: dense foods (nuts, seeds, cheese, spreads) about 30 g, others their first household measure
     var g = (f.n.kcal || 0) > 350 ? 30 : f.m.length ? Math.min(Math.max(f.m[0][1], 50), 250) : 100;
     return { f: f, g: g, v: f.n[k] * g / 100, m: f.m[0] };
-  }).filter(function (x) { return x.v > 0; }).sort(function (a, b) { return b.v - a.v; });
+  }).filter(function (x) { var dv = IK_EDITION.dailyValues[k]; return x.v > 0 && (!dv || x.v >= dv * 0.1); }).sort(function (a, b) { return b.v - a.v; });   // V4: a usual portion must give at least 10% of the day
   // one per family ("Broccoli, cooked" and "Broccoli, raw" count once)
   var seen = {}, out = [];
   list.forEach(function (x) { var fam = x.f.label.split(/[ ,(]/)[0].toLowerCase(); if (!seen[fam]) { seen[fam] = 1; out.push(x); } });
-  IK_IDEAS_CACHE[k] = out.slice(0, 8);
-  return IK_IDEAS_CACHE[k].slice(0, n || 3);
+  IK_IDEAS_CACHE[ck] = out.slice(0, 8);
+  return IK_IDEAS_CACHE[ck].slice(0, n || 3);
 }
 function ikIdeasText(k) {
-  return ikIdeas(k, 3).map(function (x) { return ikLc(x.f.label.replace(/\s*\([^)]*\)/g, "").replace(/, (cooked|raw|baked|roasted|boiled|fried|grilled)$/i, "").replace(/^(\w+), (\w+)$/, "$2 $1")); }).join(", ").replace(/, ([^,]*)$/, " or $1");
+  var xs = ikIdeas(k, 3);
+  if (!xs.length) return k === "vitD" || k === "b12" ? "a supplement (a pharmacist can help you pick one)" : "a wider mix of whole foods";
+  return xs.map(function (x) {
+    var p = x.f.label.replace(/\s*\([^)]*\)/g, "").replace(/, (cooked|raw|baked|roasted|boiled|fried|grilled)$/i, "").split(", ");
+    return (p.length > 1 && /^[A-Za-z-]+$/.test(p[1]) ? p[1] + " " + p[0] : p[0]).toLowerCase();
+  }).join(", ").replace(/, ([^,]*)$/, " or $1");
 }
 /* One short sentence the Today card can show (no AI). */
 function ikTopTip(d, day) {
   var pat = ikPatterns(d, day, 14), name = dd.helper ? dd.helper.name() : "DigiBot";
   if (pat.low.length) {
-    var l = pat.low[0], extra = l.k === "protein" ? " A cup of Greek yogurt, a can of tuna or a serving of lentils would close a gap." : " " + ikIdeasText(l.k).replace(/^./, function (c) { return c.toUpperCase(); }) + " would help.";
+    var l = pat.low[0], extra = l.k === "protein" && ikStyle(d).style !== "plant" ? " A cup of Greek yogurt, a can of tuna or a serving of lentils would close a gap." : " " + ikIdeasText(l.k).replace(/^./, function (c) { return c.toUpperCase(); }) + " would help.";
     return { k: l.k, text: l.label + " has been under your target " + l.under + " of the last " + l.logged + " days you logged." + extra };
   }
   if (pat.high.length) { var h = pat.high[0]; return { k: h.k, text: h.label + " has averaged " + Math.round(h.pct) + "% of your upper amount over the last " + h.logged + " days you logged." }; }
@@ -7666,7 +7853,13 @@ function ikShow(d, id) { return ikAvail(d, id) && !(ikSet(d).hidden || {})[id]; 
 
 /* ---------- time: when things were eaten ---------- */
 function ikEntryDate(e) { var p = String(e.day).split("-"), t = String(e.time || "12:00").split(":"); return new Date(+p[0], +p[1] - 1, +p[2], +t[0] || 0, +t[1] || 0); }
-function ikEntryKcalM(e, d) { return e.id ? ikMemo("k:" + e.id, function () { return ikEntryKcal(e, d); }) : ikEntryKcal(e, d); }
+function ikEntryKcalM(e, d) {
+  if (!e.id) return ikEntryKcal(e, d);
+  ikDCReset(d);
+  var sig = JSON.stringify(e.items), c = IK_DC.kcal[e.id];
+  if (c && c.sig === sig) return c.v;
+  var v = ikEntryKcal(e, d); IK_DC.kcal[e.id] = { sig: sig, v: v }; return v;
+}
 /* Water, black coffee, plain tea and supplements don't break a fast. */
 function ikBreaksFast(e, d) { return e.kind !== "supplement" && ikEntryKcalM(e, d) > IK_FASTOK_KCAL; }
 function ikEatEvents(d) {
@@ -8567,6 +8760,7 @@ function ikRenderAdvice(ctx) {
   h += '<section class="ik-tip"><svg class="ik-tipring" width="36" height="36" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="var(--ik-vit)" stroke-width="7"/></svg><div class="ik-tiptext"><b>' +
     ikEsc(name) + "'s weekly check-in:</b> " + ikEsc(ikCheckIn(d, p7)) + '<br><button class="ik-link" data-ask="checkin">Ask ' + ikEsc(name) + " to explain</button></div></section>";
   h += '<h2 class="ik-h2">Running low · last 7 days</h2>';
+  h += '<p class="ik-small" style="margin:-4px 0 8px">Food ideas: ' + ikEsc((IK_STYLES.filter(function (x) { return x.k === ikStyle(d).style; })[0] || IK_STYLES[0]).label.toLowerCase()) + '. <button class="ik-link" data-act="eating">Change</button></p>';
   h += p7.low.length ? '<section class="ik-list">' + p7.low.slice(0, 6).map(ikLowRow).join("") + "</section>" : '<div class="ik-card ik-small">' + (p7.logged < 2 ? "Log at least two days to see what's running low." : "Nothing is running low this week. 👍") + "</div>";
   if (p7.high.length) {
     h += '<h2 class="ik-h2">Above the upper amount</h2><section class="ik-list">' + p7.high.map(function (x) {
@@ -9119,8 +9313,9 @@ function ikEntrySig(e) {
 }
 function ikUsual(d, mode) {
   return ikMemo("usual:" + mode, function () {
-    var by = {}, from = ikAddDays(ikToday(), -60), list = [];
+    var by = {}, from = ikAddDays(ikToday(), -60), oldest = ikAddDays(ikToday(), -180), list = [];
     (d.entries || []).forEach(function (e) {
+      if (e.day < oldest) return;   // V4: only the last six months, so it stays quick
       if (!(e.items || []).length || !(e.items || []).every(function (i) { return ikResolve(i.ref, d); })) return;   // skip ones whose food was deleted
       var sig = ikEntrySig(e), at = e.day + " " + (e.time || "");
       var u = by[sig] || (by[sig] = { sig: sig, e: e, count: 0, last: "" });
@@ -9702,6 +9897,7 @@ const DD_PROGRAM = {
     { id: "profile", icon: "🎯", label: "My profile & targets", note: function () { return ikProfileReady((dd.getData().settings || {}).profile) ? "Recommended amounts, or your own" : "Not set yet: tap to make targets yours"; }, run: function () { ikOpenProfile(); } },
     { id: "again", icon: "⚡", label: "Add again", note: "Recent and usual foods and drinks, one tap", run: function () { ikOpenAgain(); } },
     { id: "cooking", icon: "🧂", label: "How I cook", note: "Salt and cooking oil, for closer sodium and fat numbers", run: function () { ikOpenCooking(); } },
+    { id: "eating", icon: "🥗", label: "How I like to eat", note: "Whole foods, low sugar or plant-based: steers food ideas", run: function () { ikOpenEating(); } },
     { id: "charts", icon: "📊", label: "My home screen charts", note: "Pick the main ring, charts and small bars on Today", run: function () { ikOpenCharts(); } },
     { id: "gauges", icon: "🎛️", label: "Home screen & health", note: "Gauges, fasting, health conditions, medicines", run: function () { ikOpenGauges(); } },
     { id: "recipes", icon: "🍲", label: "My recipes & foods", note: "Saved sauces, dishes and labels", run: function () { ikOpenRecipes(); } },
@@ -9761,6 +9957,9 @@ const DD_PROGRAM = {
     "ADD AGAIN (V4): Today has one-tap chips and a ⚡ Add again list (Most often / Recent) for things the person has had before. " +
     "HYDRATION: water and other drinks count toward the day's drinks. Log water with log_water; other drinks with log_food, kind 'drink' (grams = mL). " +
     "For a sauce or mixed dish, ask what's in it if it matters, or use save_recipe. Never show an id: call things by their names. Targets: the person can change any target (set_target). " +
+    "FOOD IDEAS (V4): suggest whole, minimally processed foods. Never suggest fruit juice, smoothies, pop, sports or energy drinks, sweetened yogurt or cereal, candy or other ultra-processed foods to fill a nutrient gap, even when they're high in it: say whole fruit instead of juice (vitamin C: red or green pepper, kiwi, strawberries, broccoli, a whole orange). " +
+    "Lean on protein-rich foods (fish, eggs, meat, Greek yogurt, beans, lentils, tofu), vegetables, whole fruit, nuts, seeds and fermented foods. Supplements are an option to mention, not the first answer, and big changes are worth checking with a doctor. " +
+    "Follow 'How they like to eat' in the data, including their own words: if they name a coach, doctor or approach they trust, fit ideas to it where it's safe, without claiming that person said something specific. Menu → 🥗 How I like to eat changes it. " +
     "Care: no shaming or 'bad food' talk, never push eating less, mention seeing a doctor or dietitian for health conditions, pregnancy or big changes. This is a reference, not medical advice. The person is an adult. " +
     "HOME SCREEN & HEALTH (V3): the person can turn on fasting tracking, a monthly 3-day fast reminder, health conditions (diabetes, high blood pressure, kidney disease, gout, celiac, pregnancy, low iron, bone health, keto) " +
     "and medicines (statin, warfarin) in menu → Home screen & health. The program then flags foods to watch (gluten, purines and beer, high-mercury and raw fish, grapefruit with statins, vitamin K with warfarin, sodium, potassium) " +
@@ -9769,6 +9968,15 @@ const DD_PROGRAM = {
     "Never diagnose. Use set_tracking when they ask to turn something on or off. " +
     "Photos are never saved. The food table is a selection from the Canadian Nutrient File (Health Canada).\n\nFOOD LIST (id: name):\n" + IK_FOODLIST.map(function (f) { return f.key + ": " + f.label + (f.m[0] ? " [" + ikMeasureLabel(f.m[0][0]) + " = " + Math.round(f.m[0][1]) + " g]" : ""); }).join("\n"),
 
+  /* V4: a one-line description of a data set, for "Check a backup file". */
+  describeData: function (d) {
+    var days = {}, n = 0; (d.entries || []).forEach(function (e) { days[e.day] = 1; n++; });
+    var ks = Object.keys(days).sort(), f = function (x) { return Number(x).toLocaleString("en-CA"); };
+    var dt = function (k) { return ikParseDay(k).toLocaleDateString("en-CA", { year: "numeric", month: "short", day: "numeric" }); };
+    var pl = function (x, one, many) { return f(x) + " " + (x === 1 ? one : many); };
+    return pl(ks.length, "day", "days") + " (" + pl(n, "meal or drink", "meals and drinks") + ")" + (ks.length ? ", " + dt(ks[0]) + " to " + dt(ks[ks.length - 1]) : "") +
+      ", " + pl((d.customFoods || []).length, "of your own foods", "of your own foods") + ", " + pl((d.recipes || []).length, "recipe", "recipes") + ", plus your targets and settings";
+  },
   summarizeForAI: function (ctx, opts) {
     var d = ctx.data, today = ikToday(), p = d.settings.profile || {}, out = [];
     out.push("Today is " + ikLongDate(today) + " (" + today + ").");
@@ -9787,6 +9995,8 @@ const DD_PROGRAM = {
     if (pat.high.length) out.push("Above upper amount (7 days): " + pat.high.map(function (l) { return l.label + " " + Math.round(l.pct) + "%"; }).join(", ") + ".");
     var ck = ikCook(d), oilL = IK_OILS.filter(function (o) { return o.k === ck.oil; })[0];
     out.push("How they cook" + (ck.set ? "" : " (not set yet, using the usual)") + ": salt " + IK_SALT_GROUPS.map(function (g) { return g.label.toLowerCase() + " " + ck.salt[g.k]; }).join(", ") + "; " + (oilL ? oilL.label.toLowerCase() : "oil") + (ck.oil === "none" ? "" : ", " + ck.oilAmt) + ".");
+    var es = ikStyle(d), esL = IK_STYLES.filter(function (x) { return x.k === es.style; })[0];
+    out.push("How they like to eat: " + esL.label + " (" + esL.note + ")" + (es.notes ? ' Their own words: "' + es.notes + '"' : "") + " Follow this for every food idea.");
     var fl4 = (d.dayFills || []).filter(function (f) { return f.day >= ikAddDays(today, -30); });
     if (fl4.length) out.push("Filled days in the last 30: " + fl4.filter(function (f) { return f.kind === "fast"; }).length + " marked as fasting, " + fl4.filter(function (f) { return f.kind === "avg"; }).length + " filled with their average day.");
     if (d.recipes.length) out.push("Their recipes: " + d.recipes.map(function (r) { return r.name + " (id r:" + r.id + ")"; }).join(", ") + ".");
@@ -10079,6 +10289,7 @@ function ikMount(ctx) {
     else if (act === "again") ikOpenAgain();
     else if (act === "profile") ikOpenProfile();
     else if (act === "cooking") ikOpenCooking();
+    else if (act === "eating") ikOpenEating();
     else if (act === "cookdefault") { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings, { cooking: Object.assign({}, dt.settings.cooking || {}, { set: true }) }); }); dd.ui.toast("Set: light salt and a little canola oil. Change it any time in menu → How I cook.", 4000); }
     else if (act === "gauges") ikOpenGauges();
     else if (act === "charts") ikOpenCharts();
@@ -10147,7 +10358,8 @@ function ikMount(ctx) {
 
 </script>
 <script>
-dd.start(typeof DD_PROGRAM !== "undefined" ? DD_PROGRAM : null);
+/* PLATFORM CHANGE (2026-10-13 V4): open the browser's database first (at most 4 seconds), then start. */
+dd.store.ready().then(function () { dd.start(typeof DD_PROGRAM !== "undefined" ? DD_PROGRAM : null); });
 </script>
 </body>
 </html>
