@@ -28,6 +28,7 @@
   Supplement, My recipes & foods, or "Use my own numbers" on any food in a meal. Editing one fixes every day it was had.
   Press and hold the camera button (right-click on a computer): Quick add menu with Add again, water and every way to add.
   Removing a food from a meal (its ✕) now saves at once, with Undo; tap any nutrient in "Every nutrient" to see where it came from.
+  📊 My home screen charts: pick the main ring, the charts under it and the small bars (default: the usual look).
   ⚡ Add again: one-tap chips on Today for the things you have most, and a list with Most often / Recent tabs.
   Platform change, marked "PLATFORM CHANGE (2026-10-13 V4)": dd.helper dictation (above).
   0.3.0 (V3 handoff, Oran 2026-10-13): the home screen as an instrument cluster. Menu → Home screen & health turns
@@ -7458,26 +7459,111 @@ function ikSpark(week, k, tg, color, day, getter) {
   if (tg) { var ty = (H - tg / max * (H - 2)).toFixed(1); out += '<line x1="0" x2="' + W + '" y1="' + ty + '" y2="' + ty + '" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2" opacity=".45"/>'; }
   return out + "</svg>";
 }
+/* ===== V4 (Oran, 2026-10-13): pick your own charts =====
+   Three levels on Today: one main ring, charts under it (ring + 7-day bars), and small bars. Saved in
+   settings.layout = {primary, subs:[keys], minis:[keys]}. No layout saved = the usual (V3) look.
+   Keys are nutrient keys, plus "drinks", "netcarb", and for small bars "vit" / "min" (how many on target). */
+var IK_META_COL = { kcal: "energy", protein: "protein", fat: "fat", carb: "carb", sugar: "sugar", fibre: "fibre", sat: "sat", drinks: "water", netcarb: "carb" };
+var IK_SHORT = { carb: "Carbs", fat: "Fat", sugar: "Sugars", kcal: "Energy", na: "Sodium", k: "Potassium", ca: "Calcium", fe: "Iron", mg: "Magnesium", zn: "Zinc" };
+function ikMeta(d, k) {
+  if (k === "drinks") return { k: k, label: "Drinks", full: "Drinks (water from drinks)", unit: "mL", dp: 0, kind: "target", color: "var(--ik-water)", soft: "var(--ik-water-soft)", get: function (t) { return t.drinksMl || 0; } };
+  if (k === "netcarb") return { k: k, label: "Net carbs", full: "Net carbs (carbs minus fibre)", unit: "g", dp: 0, kind: "limit", color: "var(--ik-carb)", soft: "var(--ik-carb-soft)", get: function (t) { return Math.max(0, (t.v.carb || 0) - (t.v.fibre || 0)); } };
+  var nt = IK_NBY[k]; if (!nt) return null;
+  var c = IK_META_COL[k] || (nt.g === "Vitamins" ? "vit" : nt.g === "Minerals" ? "min" : nt.g === "Fats" ? "fat" : k === "caffeine" ? "sat" : "protein");
+  var m = { k: k, label: IK_SHORT[k] || nt.label, full: nt.label, unit: nt.unit, dp: nt.dp, kind: nt.kind, color: "var(--ik-" + c + ")", soft: "var(--ik-" + c + "-soft)", get: function (t) { return t.v[k] || 0; } };
+  if (k === "sugar") { m.kind = "limit"; m.ref = 100; m.refNote = "Daily Value"; }
+  return m;
+}
+function ikChartKeys() {
+  return ["kcal", "protein", "fat", "carb", "sugar", "fibre", "sat", "netcarb", "drinks"].concat(IK_N.filter(function (n) {
+    return ["kcal", "protein", "fat", "carb", "sugar", "fibre", "sat", "added", "water"].indexOf(n.k) < 0; }).map(function (n) { return n.k; }));
+}
+function ikLayout(d) {
+  var L = (d.settings && d.settings.layout) || null, hide = ikHideKcal(d);
+  var primary = (L && L.primary) || "kcal"; if (primary === "kcal" && hide) primary = "protein";
+  var subs = L && Array.isArray(L.subs) ? L.subs.slice() : ikMacroDefs(d).filter(function (m) { return ikShow(d, "m_" + m.k); }).map(function (m) { return m.k; });
+  subs = subs.filter(function (k) { return k !== primary && !(hide && k === "kcal") && ikMeta(d, k); });
+  var minis = L && Array.isArray(L.minis) ? L.minis.slice() : ["vit", "min"];
+  minis = minis.filter(function (k) { return k === "vit" || k === "min" || (ikMeta(d, k) && !(hide && k === "kcal")); });
+  return { custom: !!L, primary: primary, subs: subs, minis: minis };
+}
 function ikHeroRing(d, t, week, day) {
-  var hide = ikHideKcal(d), k = hide ? "protein" : "kcal", unit = hide ? "g" : "kcal", label = hide ? "Protein" : "Energy";
-  var color = hide ? "var(--ik-protein)" : "var(--ik-energy)", soft = hide ? "var(--ik-protein-soft)" : "var(--ik-energy-soft)";
-  var v = t.v[k], tg = ikTarget(d, k) || 0, pct = tg ? v / tg : 0, left = Math.round(tg - v);
+  var m = ikMeta(d, ikLayout(d).primary), v = m.get(t), tg = ikMacroTarget(d, m) || 0, pct = tg ? v / tg : 0, left = tg - v, over = m.kind === "limit" && left < 0;
+  var side = !tg ? '<span class="ik-small">No target set</span>'
+    : m.kind === "limit" ? (left >= 0 ? ikNum(left, m.dp) + "<span> " + m.unit + " left</span>" : '<span style="color:var(--ik-high)">' + ikNum(-left, m.dp) + "</span><span> " + m.unit + " over</span>")
+    : left > 0 ? ikNum(left, m.dp) + "<span> " + m.unit + " to go</span>" : '<span class="ik-done" style="font-size:15px;margin:0">✓ Target reached</span>';
   return '<section class="ik-card ik-hero" data-act="nutrients" title="See every nutrient">' +
-    '<div class="ik-heroring">' + ikRingSvg([{ label: label, pct: pct, color: color, soft: soft }], 180, 18, 0) +
-      '<div class="ik-heromid"><div class="ik-heronum">' + ikNum(v, 0) + '</div><div class="ik-small">' + unit + " of " + ikNum(tg, 0) + "</div></div></div>" +
-    '<div class="ik-heroside"><div class="ik-k ' + (hide ? "protein" : "energy") + '">' + label + "</div>" +
-      '<div class="ik-v">' + (left > 0 ? ikNum(left, 0) + "<span> " + unit + " to go</span>" : '<span class="ik-done" style="font-size:15px;margin:0">✓ Target reached</span>') + "</div>" +
-      '<div class="ik-small" style="margin-top:8px">Last 7 days</div>' + ikSpark(week, k, tg, color, day) + "</div></section>";
+    '<div class="ik-heroring">' + ikRingSvg([{ label: m.label, pct: pct, color: over ? "var(--ik-high)" : m.color, soft: m.soft }], 180, 18, 0) +
+      '<div class="ik-heromid"><div class="ik-heronum">' + ikNum(v, m.dp) + '</div><div class="ik-small">' + m.unit + (tg ? " of " + ikNum(tg, m.dp) : "") + "</div></div></div>" +
+    '<div class="ik-heroside"><div class="ik-k" style="color:' + m.color + '">' + ikEsc(m.label) + "</div>" +
+      '<div class="ik-v">' + side + "</div>" +
+      '<div class="ik-small" style="margin-top:8px">Last 7 days</div>' + ikSpark(week, m.k, tg, m.color, day, function (s) { return m.get(s.t); }) + "</div></section>";
 }
 function ikMacroTile(d, t, week, m, day) {
-  var v = t.v[m.k], tg = ikMacroTarget(d, m), pct = tg ? v / tg : 0, over = m.kind === "limit" && pct > 1;
-  var allMissing = t.items > 0 && t.miss[m.k] >= t.items;
+  if (!m.get) { var mm = ikMeta(d, m.k); if (mm) m = mm; }
+  var v = m.get(t), tg = ikMacroTarget(d, m), pct = tg ? v / tg : 0, over = m.kind === "limit" && pct > 1;
+  var allMissing = t.items > 0 && t.miss[m.k] != null && t.miss[m.k] >= t.items;
   var color = over ? "var(--ik-amber)" : m.color;
-  return '<button class="ik-macro" data-act="nutrients" aria-label="' + ikEsc(m.label + " " + ikNum(v, 0) + " of " + ikNum(tg, 0) + " " + m.unit) + '">' +
+  return '<button class="ik-macro" data-act="nutrients" aria-label="' + ikEsc(m.label + " " + ikNum(v, m.dp) + (tg ? " of " + ikNum(tg, m.dp) : "") + " " + m.unit) + '">' +
     '<div class="ik-macrotop">' + ikRingSvg([{ label: m.label, pct: allMissing ? 0 : pct, color: color, soft: m.soft }], 44, 7, 0) +
-      '<div class="ik-macrotx"><div class="ik-t">' + ikEsc(m.label) + '</div><div class="ik-n">' + (allMissing ? '<span class="ik-nm" style="font-size:13px">not measured</span>' : ikNum(v, 0) + "<span> / " + ikNum(tg, 0) + " " + m.unit + "</span>") + "</div></div></div>" +
-    ikSpark(week, m.k, tg, m.color, day) +
-    '<div class="ik-small ik-macronote">' + (m.kind === "limit" ? (over ? "Above " + (m.refNote ? "the " + m.refNote : "your upper amount") : "Upper amount") : pct >= 1 ? "✓ Reached" : Math.round(pct * 100) + "% of target") + "</div></button>";
+      '<div class="ik-macrotx"><div class="ik-t">' + ikEsc(m.label) + '</div><div class="ik-n">' + (allMissing ? '<span class="ik-nm" style="font-size:13px">not measured</span>' : ikNum(v, m.dp) + "<span>" + (tg ? " / " + ikNum(tg, m.dp) : "") + " " + m.unit + "</span>") + "</div></div></div>" +
+    ikSpark(week, m.k, tg, m.color, day, function (s) { return m.get(s.t); }) +
+    '<div class="ik-small ik-macronote">' + (!tg ? "No target set" : m.kind === "limit" ? (over ? "Above " + (m.refNote ? "the " + m.refNote : "your upper amount") : "Upper amount") : pct >= 1 ? "✓ Reached" : Math.round(pct * 100) + "% of target") + "</div></button>";
+}
+function ikMinisHtml(d, t) {
+  var L = ikLayout(d); if (!L.minis.length) return "";
+  return '<div class="ik-minis ik-minis2">' + L.minis.map(function (k) {
+    if (k === "vit" || k === "min") {
+      var list = k === "vit" ? IK_VITS : IK_MINS, n = ikMetCount(d, t, list);
+      return '<button class="ik-mini" data-act="nutrients"><div class="ik-t">' + (k === "vit" ? "Vitamins" : "Minerals") + ' on target</div><div class="ik-n">' + n + "<span> of " + list.length + '</span></div><div class="ik-bar" style="background:var(--ik-' + k + '-soft)"><i style="width:' + Math.round(n / list.length * 100) + "%;background:var(--ik-" + k + ')"></i></div></button>';
+    }
+    var m = ikMeta(d, k), v = m.get(t), tg = ikMacroTarget(d, m), pct = tg ? Math.min(100, v / tg * 100) : 0, over = m.kind === "limit" && tg && v > tg;
+    return '<button class="ik-mini" data-act="nutrients"><div class="ik-t">' + ikEsc(m.label) + '</div><div class="ik-n">' + ikNum(v, m.dp) + "<span>" + (tg ? " / " + ikNum(tg, m.dp) : "") + " " + m.unit + "</span></div>" +
+      '<div class="ik-bar" style="background:' + m.soft + '"><i style="width:' + Math.round(pct) + "%;background:" + (over ? "var(--ik-high)" : m.color) + '"></i></div></button>';
+  }).join("") + "</div>";
+}
+function ikOpenCharts() {
+  var sh = dd.ui.sheet("", { sticky: false }); sh.classList.add("ik-sheet");
+  function save(L) { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings, { layout: L }); }); paint(); }
+  function paint() {
+    var d = dd.getData(), L = ikLayout(d), keys = ikChartKeys().filter(function (k) { return !(ikHideKcal(d) && k === "kcal"); });
+    var label = function (k) { return k === "vit" ? "Vitamins on target (count)" : k === "min" ? "Minerals on target (count)" : ikMeta(d, k).full; };
+    var list = function (which, arr) {
+      return arr.map(function (k, i) {
+        return '<div class="ik-tog"><span class="ik-grow"><b>' + ikEsc(label(k)) + "</b></span>" +
+          '<button class="ik-x" data-up="' + which + ":" + i + '" aria-label="Move up"' + (i ? "" : " disabled") + ">↑</button>" +
+          '<button class="ik-x" data-down="' + which + ":" + i + '" aria-label="Move down"' + (i < arr.length - 1 ? "" : " disabled") + ">↓</button>" +
+          '<button class="ik-x" data-rm="' + which + ":" + i + '" aria-label="Remove ' + ikEsc(label(k)) + '">✕</button></div>';
+      }).join("") || '<p class="ik-small">None.</p>';
+    };
+    var addSel = function (which, arr, pool, max) {
+      if (arr.length >= max) return '<p class="ik-small">That\'s the most that fit (' + max + ").</p>";
+      var left = pool.filter(function (k) { return arr.indexOf(k) < 0 && k !== L.primary; });
+      return '<select class="ik-input" data-add="' + which + '" style="margin-top:8px"><option value="">＋ Add a ' + (which === "subs" ? "chart" : "small bar") + "…</option>" +
+        left.map(function (k) { return '<option value="' + k + '">' + ikEsc(label(k)) + "</option>"; }).join("") + "</select>";
+    };
+    sh.innerHTML = '<div class="ik-sheettop"><h2>My home screen charts</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
+      '<p class="ik-small" style="margin-top:0">Pick what you want front and center on Today. Changes show straight away.</p>' +
+      '<h3 class="ik-sechead">Main ring</h3><div class="ik-card"><select class="ik-input" data-primary>' +
+        keys.map(function (k) { return '<option value="' + k + '"' + (k === L.primary ? " selected" : "") + ">" + ikEsc(label(k)) + "</option>"; }).join("") + "</select></div>" +
+      '<h3 class="ik-sechead">Charts under it</h3><div class="ik-card">' + list("subs", L.subs) + addSel("subs", L.subs, keys, 10) + "</div>" +
+      '<h3 class="ik-sechead">Small bars</h3><div class="ik-card">' + list("minis", L.minis) + addSel("minis", L.minis, ["vit", "min"].concat(keys), 8) + "</div>" +
+      (L.custom ? '<button class="ik-btn ghost wide" data-reset>Back to the usual</button>' : "") +
+      '<button class="ik-btn wide" data-close style="margin-top:8px">Done</button>' +
+      '<p class="ik-small">The other gauges (health, fasting, drinks, tips) are under menu → Home screen &amp; health.</p>';
+    var cur = function () { return { primary: L.primary, subs: L.subs.slice(), minis: L.minis.slice() }; };
+    sh.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", dd.ui.closeSheet); });
+    sh.querySelector("[data-primary]").addEventListener("change", function (e) { var n = cur(); n.primary = e.target.value; save(n); });
+    sh.querySelectorAll("[data-add]").forEach(function (sel) { sel.addEventListener("change", function () { if (!sel.value) return; var n = cur(); n[sel.getAttribute("data-add")].push(sel.value); save(n); }); });
+    var move = function (attr, dir) { sh.querySelectorAll("[" + attr + "]").forEach(function (b) { b.addEventListener("click", function () {
+      var x = b.getAttribute(attr).split(":"), n = cur(), a = n[x[0]], i = +x[1];
+      if (dir === 0) a.splice(i, 1); else { var j = i + dir; if (j < 0 || j >= a.length) return; var tmp = a[i]; a[i] = a[j]; a[j] = tmp; }
+      save(n);
+    }); }); };
+    move("data-up", -1); move("data-down", 1); move("data-rm", 0);
+    var rs = sh.querySelector("[data-reset]"); if (rs) rs.addEventListener("click", function () { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings); delete dt.settings.layout; }); paint(); dd.ui.toast("Back to the usual charts."); });
+  }
+  paint();
 }
 function ikWaterTile(d, t, week, day) {
   var tg = ikTarget(d, "drinks") || 2200, ml = t.drinksMl, pct = ml / tg;
@@ -8101,16 +8187,18 @@ function ikOpenGauges() {
     h += '<h3 class="ik-sechead">Medicines I take</h3><div class="ik-card">' + IK_MEDS.map(function (m) { return row('data-med="' + m.k + '"', ikMed(d, m.k), m.label, m.note); }).join("") + "</div>";
     var groups = {};
     IK_GAUGES.forEach(function (g) { if (ikAvail(d, g.id)) (groups[g.group] = groups[g.group] || []).push(g); });
-    h += '<h3 class="ik-sechead">On my home screen</h3><div class="ik-card">' + ["Everyday", "Macros", "Fasting", "Health"].map(function (gr) {
+    h += '<h3 class="ik-sechead">On my home screen</h3><div class="ik-card">' + ["Everyday", "Fasting", "Health"].map(function (gr) {
       if (!groups[gr]) return "";
       return '<div class="ik-ngroup" style="margin:6px 0 0">' + gr + "</div>" + groups[gr].map(function (g) {
         if (g.id === "m_protein" && ikHideKcal(d)) return "";
         return row('data-g="' + g.id + '"', !hidden[g.id], g.label.replace("{name}", name), "");
       }).join("");
     }).join("") + "</div>";
+    h += '<button class="ik-btn soft wide" data-charts>📊 Choose my charts (main ring, charts, small bars)</button>';
     h += '<p class="ik-small">Health settings stay on your devices. Intake is a reference, not medical advice: your doctor, pharmacist or dietitian knows your situation best.</p>';
     sh.innerHTML = h;
     sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
+    sh.querySelector("[data-charts]").addEventListener("click", ikOpenCharts);
     var set = function (fn) { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings); fn(dt.settings); }); paint(); };
     sh.querySelectorAll("[data-fast]").forEach(function (c) { c.addEventListener("change", function () { var k = c.getAttribute("data-fast"); set(function (st) { st.fasting = Object.assign({}, st.fasting); st.fasting[k] = c.checked; }); }); });
     var gs = sh.querySelector("[data-goal]"); if (gs) gs.addEventListener("change", function () { set(function (st) { st.fasting = Object.assign({}, st.fasting, { goal: +gs.value }); }); });
@@ -8166,21 +8254,16 @@ function ikRenderToday(ctx) {
   if (ikShow(d, "alerts")) h += ikAlertsCard(d, es);
   h += ikHealthCluster(d, t, week, day, es);
   h += ikBodyCluster(d, t, day, isToday);
-  var macros = ikMacroDefs(d).filter(function (m) { return ikShow(d, "m_" + m.k); });
-  if (macros.length) h += '<div class="ik-macros">' + macros.map(function (m) { return ikMacroTile(d, t, week, m, day); }).join("") + "</div>";
+  var subs = ikLayout(d).subs.map(function (k) { return ikMeta(d, k); });   // V4: the person's own charts (or the usual)
+  if (subs.length) h += '<div class="ik-macros">' + subs.map(function (m) { return ikMacroTile(d, t, week, m, day); }).join("") + "</div>";
   if (ikShow(d, "drinks")) h += ikWaterTile(d, t, week, day);
-  if (ikShow(d, "vitmin")) {
-    var vit = ikMetCount(d, t, IK_VITS), min = ikMetCount(d, t, IK_MINS);
-    h += '<div class="ik-minis ik-minis2">' +
-      '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Vitamins on target</div><div class="ik-n">' + vit + "<span> of " + IK_VITS.length + '</span></div><div class="ik-bar" style="background:var(--ik-vit-soft)"><i style="width:' + Math.round(vit / IK_VITS.length * 100) + '%;background:var(--ik-vit)"></i></div></button>' +
-      '<button class="ik-mini" data-act="nutrients"><div class="ik-t">Minerals on target</div><div class="ik-n">' + min + "<span> of " + IK_MINS.length + '</span></div><div class="ik-bar" style="background:var(--ik-min-soft)"><i style="width:' + Math.round(min / IK_MINS.length * 100) + '%;background:var(--ik-min)"></i></div></button></div>';
-  }
+  if (ikShow(d, "vitmin")) h += ikMinisHtml(d, t);
   if (ikShow(d, "tip")) {
     var tip = ikTopTip(d, day);
     h += '<section class="ik-tip"><svg class="ik-tipring" width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12" fill="none" stroke="var(--ik-vit)" stroke-width="7"/></svg>' +
       '<div class="ik-tiptext"><b>' + ikEsc(name) + ":</b> " + ikEsc(tip.text) + (tip.k ? '<br><button class="ik-link" data-ask="tip" data-k="' + ikEsc(tip.k) + '">Ask ' + ikEsc(name) + " about this</button>" : "") + "</div></section>";
   }
-  h += '<button class="ik-link ik-customize" data-act="gauges">🎛️ Choose what shows here</button>';
+  h += '<div class="ik-row" style="justify-content:center;flex-wrap:wrap;gap:4px 14px;margin:0 0 14px"><button class="ik-link" data-act="charts">📊 Choose my charts</button><button class="ik-link" data-act="gauges">🎛️ Health &amp; other gauges</button></div>';
   h += "</div><div>";
   // the food list, grouped by part of day; drinks and supplements together at the end
   var groups = { morning: [], afternoon: [], evening: [], other: [] };
@@ -9614,6 +9697,7 @@ const DD_PROGRAM = {
     { id: "profile", icon: "🎯", label: "My profile & targets", note: function () { return ikProfileReady((dd.getData().settings || {}).profile) ? "Recommended amounts, or your own" : "Not set yet: tap to make targets yours"; }, run: function () { ikOpenProfile(); } },
     { id: "again", icon: "⚡", label: "Add again", note: "Recent and usual foods and drinks, one tap", run: function () { ikOpenAgain(); } },
     { id: "cooking", icon: "🧂", label: "How I cook", note: "Salt and cooking oil, for closer sodium and fat numbers", run: function () { ikOpenCooking(); } },
+    { id: "charts", icon: "📊", label: "My home screen charts", note: "Pick the main ring, charts and small bars on Today", run: function () { ikOpenCharts(); } },
     { id: "gauges", icon: "🎛️", label: "Home screen & health", note: "Gauges, fasting, health conditions, medicines", run: function () { ikOpenGauges(); } },
     { id: "recipes", icon: "🍲", label: "My recipes & foods", note: "Saved sauces, dishes and labels", run: function () { ikOpenRecipes(); } },
     { id: "about", icon: "📖", label: "About the numbers", note: "Where they come from · not medical advice", run: function () { ikOpenAbout(); } }
@@ -9992,6 +10076,7 @@ function ikMount(ctx) {
     else if (act === "cooking") ikOpenCooking();
     else if (act === "cookdefault") { dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings, { cooking: Object.assign({}, dt.settings.cooking || {}, { set: true }) }); }); dd.ui.toast("Set: light salt and a little canola oil. Change it any time in menu → How I cook.", 4000); }
     else if (act === "gauges") ikOpenGauges();
+    else if (act === "charts") ikOpenCharts();
     else if (act === "gauge") ikOpenGauge(b.getAttribute("data-k"));
     else if (act === "nutrients") { var det = document.getElementById("ikAllN"); if (det) { det.open = true; IK_UI.openAll = true; det.scrollIntoView({ behavior: "smooth", block: "start" }); } }
     else if (act === "helper") { if (dd.helper.isOpen && dd.helper.isOpen()) dd.helper.close(); else dd.helper.open(); }
