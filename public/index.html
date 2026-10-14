@@ -553,6 +553,13 @@ img.dd-digibot-face{width:96px;height:96px}
 .dd-top.dd-top-img{background:linear-gradient(rgba(0,0,0,.38),rgba(0,0,0,.38)),var(--dd-top-img) center / cover no-repeat,linear-gradient(120deg,var(--dd-brand),var(--dd-accent2))}
 .dd-top-look{width:36px;height:36px;flex:none;border:0;border-radius:50%;background:rgba(255,255,255,.2);font-size:1.05rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .dd-top-look:hover{background:rgba(255,255,255,.32)}
+/* PLATFORM CHANGE (2026-10-13 V4, Oran's iPhone): on phones the 🎨 button and the sync chip squeezed the name and
+   tagline. Both move to the menu (⚙️ Settings → Look & branding, Live sync); the chip only shows when sync has a problem. */
+@media (max-width:640px){
+  .dd-top .dd-top-look{display:none}
+  .dd-top .dd-sync-chip:not(.bad){display:none}
+  .dd-top.dd-top-bar .dd-tag{white-space:normal;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+}
 .dd-brand-topprev{border-radius:14px;overflow:hidden;margin:4px 0 8px;pointer-events:none}
 .dd-brand-topprev .dd-top{position:static}
 .dd-top-icon{font-size:1.35rem;line-height:1;display:inline-flex;align-items:center;flex:none}
@@ -5902,6 +5909,10 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     else paint();
   };
 
+  if (dd.menu) dd.menu.add({ id: "sync", icon: "🔄", label: "Live sync", order: 15,   // PLATFORM CHANGE (2026-10-13 V4): the chip is hidden on phones
+    show: function () { return !!(program && program.sync !== false); },
+    note: function () { return sync.status().short; }, badge: function () { return sync.status().kind === "bad"; },
+    run: function () { sync.openSheet(); } });
   if (dd.diag) dd.diag.addSection("Sync", function () {
     if (!program) return ["-"];
     var cfg = sync.config(), id = ledger();
@@ -8643,6 +8654,7 @@ function ikPhotoPaint() {
     if (P.busy) h += '<div class="ik-warn soft">📸 Lots going on in this image. For the best numbers, try one plate at a time.</div>';   // V4
     h += '<h2 class="ik-h2" style="margin-top:4px">Here\'s what I see</h2><div class="ik-results">' + P.items.map(function (it, i) { return ikPhotoItemHtml(it, i, d, name); }).join("") + "</div>";
     h += ikPhotoFlagsHtml(P, d);   // V3: balance and flags before Add
+    if (P.items.length > 1) h += '<label class="ik-label" style="margin-top:0">Name this meal (optional)</label><input class="ik-input" data-mealname maxlength="60" value="' + ikEsc(P.mealName || "") + '" placeholder="e.g. Sunday supper" style="margin:0 0 10px">';   // V4
     h += '<div class="ik-row" style="margin:0 0 10px"><button class="ik-link" data-additem>＋ Something I missed</button><span class="ik-grow"></span><button class="ik-link" data-again>Look again</button></div>';
     var waiting = P.items.some(function (it) { return it.ask && !it.answered; });
     h += '<button class="ik-btn wide" data-addall' + (P.items.length ? "" : " disabled") + ">Add to " + ikEsc(ikDayName(P.day).toLowerCase() === "today" ? "today" : ikDayName(P.day)) + (hide ? "" : ' · about <span data-total>' + ikNum(ikPhotoTotal(), 0) + "</span> kcal") + "</button>" +
@@ -8736,6 +8748,7 @@ function ikPhotoWire() {
   }); });
   all("[data-save]").forEach(function (c) { c.addEventListener("change", function () { P.items[+c.getAttribute("data-save")].saveRecipe = c.checked; }); });
   all("[data-rname]").forEach(function (c) { c.addEventListener("input", function () { var it = P.items[+c.getAttribute("data-rname")]; if (it.recipe) it.recipe.name = c.value.slice(0, 60); }); });
+  var mn = q("[data-mealname]"); if (mn) mn.addEventListener("input", function () { P.mealName = mn.value.trim().slice(0, 60); });
   var addAll = q("[data-addall]"); if (addAll) addAll.addEventListener("click", ikPhotoAdd);
   var ls = q("[data-lserv]"); if (ls) ls.addEventListener("input", function () { P.lserv = Math.max(0.25, Number(ls.value) || 1); });
   var al = q("[data-addlabel]"); if (al) al.addEventListener("click", ikLabelAdd);
@@ -8865,7 +8878,7 @@ function ikPhotoAdd() {
   });
   var oilItem = ikOilItem(dd.getData(), ikPhotoOilG(P, dd.getData())); if (oilItem) items.push(oilItem);   // V4
   var allDrinks = P.items.every(function (it) { return it.drink; });
-  var entry = { id: ctx.ui.uid("e"), day: P.day, time: P.time, part: P.part, kind: allDrinks ? "drink" : "food", name: "", items: items, src: "photo" };
+  var entry = { id: ctx.ui.uid("e"), day: P.day, time: P.time, part: P.part, kind: allDrinks ? "drink" : "food", name: P.mealName || "", items: items, src: "photo" };
   ctx.update(function (d) {
     newFoods.forEach(function (f) { d.customFoods.push(f); });
     newRecipes.forEach(function (r) { d.recipes.push(r); });
@@ -9275,6 +9288,7 @@ function ikOpenEntry(id) {
       '<button class="ik-link" data-addone>＋ Add a food to this</button>' +
       '<div class="ik-two"><div><label class="ik-label">Time</label><input class="ik-input" type="time" value="' + ikEsc(work.time) + '" data-t></div><div><label class="ik-label">Part of day</label><select class="ik-input" data-p>' +
       ["morning", "afternoon", "evening"].map(function (p) { return '<option value="' + p + '"' + (work.part === p ? " selected" : "") + ">" + IK_PARTS[p] + "</option>"; }).join("") + "</select></div></div>" +
+      '<label class="ik-label">Name (optional)</label><input class="ik-input" data-ename maxlength="60" value="' + ikEsc(work.name || "") + '" placeholder="' + ikEsc(ikEntryName({ items: work.items }, d)) + '">' +
       '<label class="ik-label">Note (optional)</label><input class="ik-input" data-note value="' + ikEsc(work.note || "") + '" placeholder="e.g. same sauce as yesterday">' +
       '<div class="ik-card" style="margin-top:12px"><b>' + (hide ? "" : ikNum(t.v.kcal, 0) + " kcal · ") + "protein " + ikNum(t.v.protein, 0) + " g · fibre " + ikNum(t.v.fibre, 0) + " g</b>" +
       (t.est ? '<p class="ik-small" style="margin:6px 0 0">"Estimated" means the food isn\'t in the food table, so ' + ikEsc(dd.helper ? dd.helper.name() : "DigiBot") + "'s guess is used. Pick the right food from the table, or snap the label, for exact numbers.</p>" : "") + "</div>" + ikEntryBalanceHtml(work, d) +
@@ -9352,10 +9366,30 @@ function ikOpenEntry(id) {
         dd.ui.toast("Removed.");
       });
     });
+    var en = q("[data-ename]"); if (en) en.addEventListener("input", function () { work.name = en.value.trim().slice(0, 60); });
+    /* V4 (Oran, 2026-10-13): name the recipe before it's saved. */
     var rb = q("[data-recipe]"); if (rb) rb.addEventListener("click", function () {
-      var nm = (work.name || ikEntryName(work, d)).slice(0, 60), rec = ikRecipeFrom(nm, work.items.filter(function (i) { return i.g > 0; }), d);
-      dd.update(function (dt) { dt.recipes.push({ id: dd.ui.uid("r"), name: rec.name, per100: rec.per100, totalG: rec.totalG, ingredients: rec.ingredients, plants: rec.plants, used: ikDayKey(), src: "entry" }); });
-      dd.ui.toast("Saved \"" + nm + "\" to My recipes.");
+      if (sh.querySelector("[data-rn]")) { sh.querySelector("[data-rn]").focus(); return; }
+      var box = document.createElement("div"); box.className = "ik-card"; box.style.marginTop = "10px";
+      box.innerHTML = '<label class="ik-label" style="margin-top:0">Recipe name</label><input class="ik-input" data-rn maxlength="60" value="' + ikEsc((work.name || ikEntryName(work, d)).slice(0, 60)) + '">' +
+        '<p class="ik-small" style="margin:6px 0 0">Saved under My recipes, so next time you can add it by typing its name or say "same as my ' + ikEsc((work.name || "recipe").toLowerCase()) + '".</p>' +
+        '<div class="ik-quick" style="margin:10px 0 0"><button class="ik-btn" data-rs>Save recipe</button><button class="ik-btn ghost" data-rc>Cancel</button></div>';
+      rb.closest(".ik-quick").after(box);
+      var inp = box.querySelector("[data-rn]"); inp.focus(); inp.select();
+      var go = function () {
+        var nm = inp.value.trim().slice(0, 60);
+        if (!nm) { inp.focus(); dd.ui.toast("Give the recipe a name."); return; }
+        var rec = ikRecipeFrom(nm, work.items.filter(function (i) { return i.g > 0 && !i.oil; }), d);
+        if (!work.name) work.name = nm;   // the meal takes the recipe's name too
+        dd.update(function (dt) {
+          dt.recipes.push({ id: dd.ui.uid("r"), name: rec.name, per100: rec.per100, totalG: rec.totalG, ingredients: rec.ingredients, plants: rec.plants, used: ikDayKey(), src: "entry" });
+          dt.entries = dt.entries.map(function (x) { return x.id === id ? JSON.parse(JSON.stringify(work)) : x; });
+        });
+        paint(); dd.ui.toast("Saved \"" + nm + "\" to My recipes.");
+      };
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); go(); } });
+      box.querySelector("[data-rs]").addEventListener("click", go);
+      box.querySelector("[data-rc]").addEventListener("click", function () { box.remove(); });
     });
   }
   paint();
@@ -9715,7 +9749,7 @@ DD_PROGRAM.tools = [
       time: { type: "string", description: "24-hour time like 08:30, or 'now'", optional: true },
       day: { type: "string", description: "YYYY-MM-DD, or 'today' / 'yesterday'", optional: true },
       kind: { type: "string", enum: ["food", "drink", "supplement"], optional: true },
-      name: { type: "string", description: "Short name for the meal, like 'Breakfast sandwich'", optional: true } },
+      name: { type: "string", description: "Short name for the meal, like 'Breakfast sandwich'. Use the person's own name for it if they give one.", optional: true } },
     run: function (args, ctx) {
       var d = ctx.data, day = ikDayArg(args.day), time = /^\d\d?:\d\d$/.test(args.time || "") ? ("0" + args.time).slice(-5) : (day === ikToday() ? ikNowTime() : "12:00");
       var items = [], made = [], said = [], oilG = 0;
@@ -9745,6 +9779,7 @@ DD_PROGRAM.tools = [
     } },
   { name: "change_entry", description: "Change an entry: the grams of one of its foods, its time, its part of day, add a food to it, or take a food out of it.",
     params: { entry: { type: "string", description: "The entry's id (best) or its name" }, food: { type: "string", description: "Which food in it to change (name)", optional: true },
+      rename: { type: "string", description: "A new name for the whole meal, as the person says it", optional: true },
       grams: { type: "number", optional: true }, time: { type: "string", description: "24-hour time", optional: true }, part: { type: "string", enum: ["morning", "afternoon", "evening"], optional: true },
       add_food: { type: "string", description: "A food to add to this entry: id from the FOOD LIST (or r:/c: id)", optional: true },
       add_grams: { type: "number", description: "Grams of the added food", optional: true },
@@ -9760,6 +9795,7 @@ DD_PROGRAM.tools = [
         }
         if (/^\d\d?:\d\d$/.test(args.time || "")) { e.time = ("0" + args.time).slice(-5); e.part = ikPartOf(e.time); said.push("time " + e.time); }
         if (IK_PARTS[args.part]) { e.part = args.part; said.push(IK_PARTS[args.part].toLowerCase()); }
+        if (args.rename && String(args.rename).trim()) { e.name = String(args.rename).trim().slice(0, 60); said.push("renamed to '" + e.name + "'"); }
         /* 2026-10-13: add or take out a food (DigiBot inside an entry) */
         if (args.add_food) {
           var ref = ikRefFor(args.add_food, dt); if (!ref) { var sh = ikSearch(args.add_food, dt, 1)[0]; if (sh) ref = sh.ref; }
