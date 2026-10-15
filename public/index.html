@@ -8160,7 +8160,7 @@ function ikSetDose(itemId, slot, day, taken, update) {
     });
     return r.name + " marked as not taken.";
   }
-  var time = day === ikToday() ? ikNowTime() : ikSlot(slot).time, entryId = null, ref = r.kind === "supp" && r.ref && ikResolve(r.ref, d) ? r.ref : null;
+  var time = day === ikToday() ? ikNowTime() : ikSlot(slot).time, entryId = null, ref = r.ref && ikResolve(r.ref, d) ? r.ref : null;   // V5.2: medications can carry nutrients too
   update(function (dt) {
     dt.doses = (dt.doses || []).filter(function (x) { return x.id !== id; });
     if (old && old.entry) dt.entries = dt.entries.filter(function (e) { return e.id !== old.entry; });
@@ -8170,7 +8170,7 @@ function ikSetDose(itemId, slot, day, taken, update) {
     }
     dt.doses.push({ id: id, item: itemId, day: day, slot: slot, at: time, entry: entryId });
   });
-  return "✓ " + r.name + " taken" + (ref ? ", and it counts toward today's vitamins." : ".");
+  return "✓ " + r.name + " taken" + (ref ? ", and its nutrients count toward today." : ".");
 }
 function ikDoseCard(d, day, kind) {
   var list = ikDoseList(d, day, kind), isToday = day === ikToday(), now = ikNowTime();
@@ -8200,11 +8200,13 @@ function ikOpenRegimen() {
   var d = dd.getData();
   var row = function (r) {
     var when = (r.slots || []).map(function (s) { return ikSlot(s).label; }).join(", "), days = Array.isArray(r.days) && r.days.length ? r.days.map(function (n) { return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][n]; }).join(" ") : "every day";
-    return '<button class="ik-hit" data-edit="' + ikEsc(r.id) + '"><span class="ik-grow"><b>' + ikEsc(r.name) + "</b>" + (r.dose ? " · " + ikEsc(r.dose) : "") + "<br><small>" + ikEsc(when + " · " + days) + "</small></span><span aria-hidden=\"true\">›</span></button>";
+    var vals = ikRegDoseVals(d, r), adds = ["protein", "kcal", "fibre", "na", "vitD", "ca", "fe", "b12"].filter(function (k) { return vals[k] > 0; }).slice(0, 3).map(function (k) { return ikNum(vals[k], IK_NBY[k].dp) + " " + IK_NBY[k].unit + (k === "kcal" ? "" : " " + ikLc(IK_SHORT[k] || IK_NBY[k].label)); });
+    if (!adds.length && Object.keys(vals).length) adds = [Object.keys(vals).length + " nutrients"];
+    return '<button class="ik-hit" data-edit="' + ikEsc(r.id) + '"><span class="ik-grow"><b>' + ikEsc(r.name) + "</b>" + (r.dose ? " · " + ikEsc(r.dose) : "") + "<br><small>" + ikEsc(when + " · " + days) + (adds.length ? " · adds " + ikEsc(adds.join(", ")) : "") + "</small></span><span aria-hidden=\"true\">›</span></button>";
   };
   var meds = ikRegItems(d, "med"), supps = ikRegItems(d, "supp");
   sh.innerHTML = '<div class="ik-sheettop"><h2>Medications &amp; vitamins</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
-    '<p class="ik-small" style="margin-top:0">They show on Today as a checklist at the times you set. Tap one when you take it: it greys out, and tapping again undoes it. Vitamins with nutrients count toward your day.</p>' +
+    '<p class="ik-small" style="margin-top:0">They show on Today as a checklist at the times you set. Tap one when you take it: it greys out, and tapping again undoes it. Give any item what\'s in each dose (protein, sodium, any vitamin or mineral) and it counts toward your day.</p>' +
     '<h3 class="ik-sechead">💊 Medications</h3>' + (meds.length ? '<div class="ik-hits" style="max-height:none">' + meds.map(row).join("") + "</div>" : '<p class="ik-small">None yet.</p>') +
     '<button class="ik-btn soft" data-new="med" style="margin:8px 0 14px">＋ Add a medication</button>' +
     '<h3 class="ik-sechead">🌿 Vitamins &amp; supplements</h3>' + (supps.length ? '<div class="ik-hits" style="max-height:none">' + supps.map(row).join("") + "</div>" : '<p class="ik-small">None yet.</p>') +
@@ -8214,38 +8216,68 @@ function ikOpenRegimen() {
   sh.querySelectorAll("[data-new]").forEach(function (b) { b.addEventListener("click", function () { ikEditRegimen(b.getAttribute("data-new"), null); }); });
   sh.querySelectorAll("[data-edit]").forEach(function (b) { b.addEventListener("click", function () { var r = ikRegItems(dd.getData()).filter(function (x) { return x.id === b.getAttribute("data-edit"); })[0]; if (r) ikEditRegimen(r.kind, r.id); }); });
 }
+/* V5.2 (Oran, 2026-10-14: "protein powder needs its 27 g of protein, and a medication may add sodium").
+   Every checklist item, medication or vitamin, has a "What's in each dose" section with every nutrient the app
+   tracks, typed straight in. The numbers are saved as one of the person's own foods (kind "supplement") linked
+   to the item, so each tick logs them and they count toward the day. A typical vitamin can be used as a start. */
+var IK_REG_MAIN = ["kcal", "protein", "fibre", "carb", "sugar", "fat", "sat", "na", "caffeine"];
+function ikRegDoseVals(d, r) {
+  var vals = {}, src = null, mult = Number(r && r.servings) > 0 ? Number(r.servings) : 1;
+  if (r && /^s:/.test(r.ref || "") && IK_SUPPS[r.ref.slice(2)]) src = IK_SUPPS[r.ref.slice(2)].n;
+  else if (r && /^c:/.test(r.ref || "")) {
+    var c = (d.customFoods || []).filter(function (x) { return x.id === r.ref.slice(2); })[0];
+    if (c && c.perServing) src = c.perServing;
+    else if (c && c.per100) { src = {}; var g = c.servingG || 100; Object.keys(c.per100).forEach(function (k) { if (c.per100[k] != null) src[k] = c.per100[k] * g / 100; }); }
+  }
+  if (src) Object.keys(src).forEach(function (k) { if (src[k] != null && isFinite(src[k]) && IK_NBY[k]) vals[k] = +(src[k] * mult).toPrecision(4); });
+  return vals;
+}
 function ikEditRegimen(kind, id, state) {
   var d = dd.getData(), r = id ? ikRegItems(d).filter(function (x) { return x.id === id; })[0] : null;
-  var w = state || (r ? JSON.parse(JSON.stringify(r)) : { kind: kind, name: "", dose: "", ref: "", servings: 1, slots: ["morning"], days: [], note: "" });
+  var w = state || (r ? JSON.parse(JSON.stringify(r)) : { kind: kind, name: "", dose: "", ref: "", slots: ["morning"], days: [], note: "" });
+  if (!w.vals) w.vals = r ? ikRegDoseVals(d, r) : {};
   var med = w.kind === "med";
   var sh = dd.ui.sheet("", { sticky: true }); sh.classList.add("ik-sheet");
   function collect() {
     var q = function (s) { return sh.querySelector(s); };
     if (q("[data-n]")) w.name = q("[data-n]").value.trim().slice(0, 60);
     if (q("[data-ds]")) w.dose = q("[data-ds]").value.trim().slice(0, 40);
-    if (q("[data-sv]")) w.servings = Math.max(0.25, Number(q("[data-sv]").value) || 1);
     if (q("[data-note]")) w.note = q("[data-note]").value.trim().slice(0, 120);
+    sh.querySelectorAll("[data-nk]").forEach(function (inp) { var k = inp.getAttribute("data-nk"), v = inp.value.trim(); if (v === "") delete w.vals[k]; else if (isFinite(+v) && +v >= 0) w.vals[k] = +v; });
+    var mo = q("[data-more]"); if (mo) w.moreOpen = mo.open;
+    var no = q("[data-nutr]"); if (no) w.nutrOpen = no.open;
+  }
+  function field(k) {
+    var nt = IK_NBY[k], v = w.vals[k];
+    return '<div class="ik-tgt" style="grid-template-columns:minmax(0,1fr) 120px"><span>' + ikEsc(nt.label) + ' <span class="ik-small">' + nt.unit + "</span></span>" +
+      '<input type="number" inputmode="decimal" min="0" step="any" data-nk="' + k + '" value="' + (v == null ? "" : v) + '" placeholder="–" aria-label="' + ikEsc(nt.label + " in " + nt.unit) + '"></div>';
   }
   function paint() {
-    var dd0 = dd.getData(), own = (dd0.customFoods || []).filter(function (c) { return c.kind === "supplement"; });
+    var dd0 = dd.getData();
     var chip = function (attr, val, on, label) { return '<button class="ik-chip" ' + attr + '="' + ikEsc(val) + '" aria-pressed="' + on + '">' + label + "</button>"; };
     var custom = (w.slots || []).filter(function (s) { return /^\d\d:\d\d$/.test(s); });
     var hint = med && /warfarin|coumadin|jantoven/i.test(w.name) ? "warfarin" : med && /statin|lipitor|crestor|zocor|simvastatin|atorvastatin|rosuvastatin|lovastatin|pravastatin/i.test(w.name) ? "statin" : "";
+    var more = IK_N.filter(function (n) { return IK_REG_MAIN.indexOf(n.k) < 0 && n.k !== "water" && n.k !== "added"; }), lastG = "";
+    var filled = Object.keys(w.vals).length, moreFilled = more.some(function (n) { return w.vals[n.k] != null; });
+    var nutrOpen = w.nutrOpen != null ? w.nutrOpen : (!med || filled > 0);
     sh.innerHTML = '<div class="ik-sheettop"><h2>' + (r ? "Edit " + ikEsc(r.name) : med ? "Add a medication" : "Add a vitamin or supplement") + '</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
-      '<label class="ik-label" style="margin-top:0">Name</label><input class="ik-input" data-n maxlength="60" value="' + ikEsc(w.name) + '" placeholder="' + (med ? "e.g. Ramipril" : "e.g. Vitamin D") + '">' +
-      '<label class="ik-label">Dose (optional)</label><input class="ik-input" data-ds maxlength="40" value="' + ikEsc(w.dose || "") + '" placeholder="e.g. 1 tablet, 10 mg, 2 capsules">' +
-      (med ? (hint && !ikMed(dd0, hint) ? '<div class="ik-warn soft">💡 Turn on <b>' + (hint === "warfarin" ? "A blood thinner (warfarin)" : "A statin") + '</b> in Home screen &amp; health to get food warnings for it. <button class="ik-link" data-medon="' + hint + '">Turn it on</button></div>' : "") :
-        '<label class="ik-label">Counts toward my nutrients</label><select class="ik-input" data-ref>' +
-          '<option value=""' + (!w.ref ? " selected" : "") + ">Just track it (no nutrients)</option>" +
-          '<optgroup label="Typical amounts">' + Object.keys(IK_SUPPS).map(function (k) { return '<option value="s:' + k + '"' + (w.ref === "s:" + k ? " selected" : "") + ">" + ikEsc(IK_SUPPS[k].label) + "</option>"; }).join("") + "</optgroup>" +
-          (own.length ? '<optgroup label="My own (from a label)">' + own.map(function (c) { return '<option value="c:' + c.id + '"' + (w.ref === "c:" + c.id ? " selected" : "") + ">" + ikEsc(c.name) + "</option>"; }).join("") + "</optgroup>" : "") +
-          '<option value="__new">✏️ Type in my label\'s numbers…</option></select>' +
-        (w.ref ? '<label class="ik-label">How many each time</label><input class="ik-input" type="number" inputmode="decimal" min="0.25" step="0.25" data-sv value="' + (w.servings || 1) + '" style="max-width:140px">' : "")) +
+      '<label class="ik-label" style="margin-top:0">Name</label><input class="ik-input" data-n maxlength="60" value="' + ikEsc(w.name) + '" placeholder="' + (med ? "e.g. Ramipril" : "e.g. Protein powder") + '">' +
+      '<label class="ik-label">Dose (optional)</label><input class="ik-input" data-ds maxlength="40" value="' + ikEsc(w.dose || "") + '" placeholder="' + (med ? "e.g. 1 tablet, 10 mg" : "e.g. 1 scoop, 2 capsules") + '">' +
+      (hint && !ikMed(dd0, hint) ? '<div class="ik-warn soft">💡 Turn on <b>' + (hint === "warfarin" ? "A blood thinner (warfarin)" : "A statin") + '</b> in Home screen &amp; health to get food warnings for it. <button class="ik-link" data-medon="' + hint + '">Turn it on</button></div>' : "") +
+      '<details class="ik-card ik-more" data-nutr' + (nutrOpen ? " open" : "") + ' style="margin-top:12px"><summary>' + (med ? "Does it add any nutrients? (most medicines don't)" : "What's in each dose") + (filled ? " · " + filled + " set" : "") + "</summary>" +
+        '<p class="ik-small" style="margin:6px 0 8px">Copy the numbers from the label for <b>one dose</b>' + (w.dose ? " (" + ikEsc(w.dose) + ")" : "") + '. Leave a box empty if it isn\'t in it. Each time you tick it off, these count toward your day.' +
+          (med ? " For example, an effervescent tablet can add sodium." : " For example, a scoop of protein powder might add 27 g of protein.") + "</p>" +
+        '<label class="ik-label" style="margin-top:0">Start from a typical one (optional)</label><select class="ik-input" data-preset><option value="">Choose…</option>' +
+          Object.keys(IK_SUPPS).map(function (k) { return '<option value="' + k + '">' + ikEsc(IK_SUPPS[k].label) + "</option>"; }).join("") + "</select>" +
+        IK_REG_MAIN.map(field).join("") +
+        '<details class="ik-more" data-more' + (w.moreOpen || moreFilled ? " open" : "") + '><summary>Vitamins, minerals and other fats</summary>' +
+          more.map(function (n) { var hd = n.g !== lastG ? '<div class="ik-ngroup" style="margin:10px 0 0">' + ikEsc(n.g) + "</div>" : ""; lastG = n.g; return hd + field(n.k); }).join("") + "</details>" +
+        (filled ? '<button class="ik-link" data-clearvals style="padding-left:0">Clear all the numbers</button>' : "") + "</details>" +
       '<div class="ik-label">When</div><div class="ik-chips">' + IK_SLOTS.map(function (s) { return chip("data-slot", s.k, (w.slots || []).indexOf(s.k) >= 0, s.icon + " " + s.label); }).join("") +
         custom.map(function (s) { return chip("data-slot", s, true, "⏰ " + ikNiceTime(s) + " ✕"); }).join("") + "</div>" +
       '<div class="ik-row" style="margin-top:8px"><input class="ik-input" type="time" data-tm style="max-width:150px" aria-label="A set time"><button class="ik-btn soft" data-addtime>＋ Add a set time</button></div>' +
       '<div class="ik-label">Which days</div><div class="ik-chips">' + chip("data-every", "1", !(w.days || []).length, "Every day") +
-        ["S", "M", "T", "W", "T", "F", "S"].map(function (l, i) { return chip("data-wd", String(i), (w.days || []).indexOf(i) >= 0, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]); }).join("") + "</div>" +
+        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(function (l, i) { return chip("data-wd", String(i), (w.days || []).indexOf(i) >= 0, l); }).join("") + "</div>" +
       '<label class="ik-label">Note (optional)</label><input class="ik-input" data-note maxlength="120" value="' + ikEsc(w.note || "") + '" placeholder="e.g. with food">' +
       '<div class="dd-status" data-st></div><button class="ik-btn wide" data-save style="margin-top:12px">Save</button>' +
       (r ? '<button class="ik-link" data-del style="color:var(--ik-high);display:block;margin:10px auto 0">Remove from my checklist</button>' : "");
@@ -8262,24 +8294,28 @@ function ikEditRegimen(kind, id, state) {
       if (i >= 0) w.days.splice(i, 1); else w.days.push(n); w.days.sort(); if (w.days.length === 7) w.days = []; paint();
     }); });
     var mo = q("[data-medon]"); if (mo) mo.addEventListener("click", function () { collect(); var k = mo.getAttribute("data-medon"); dd.update(function (dt) { dt.settings = Object.assign({}, dt.settings); dt.settings.meds = Object.assign({}, dt.settings.meds); dt.settings.meds[k] = true; }); paint(); });
-    var rf = q("[data-ref]"); if (rf) rf.addEventListener("change", function () {
-      collect();
-      if (rf.value === "__new") {
-        var before = {}; (dd.getData().customFoods || []).forEach(function (c) { before[c.id] = 1; });
-        ikOpenFoodEditor({ kind: "supplement", name: w.name,
-          onDone: function () { var nw = (dd.getData().customFoods || []).filter(function (c) { return !before[c.id] && c.kind === "supplement"; })[0]; if (nw) w.ref = "c:" + nw.id; ikEditRegimen(w.kind, id, w); },
-          onCancel: function () { ikEditRegimen(w.kind, id, w); } });
-        return;
-      }
-      w.ref = rf.value; paint();
+    q("[data-preset]").addEventListener("change", function (e) {
+      collect(); var p = IK_SUPPS[e.target.value]; if (!p) return;
+      Object.keys(p.n).forEach(function (k) { if (IK_NBY[k]) w.vals[k] = p.n[k]; });
+      if (!w.name) w.name = p.label; w.moreOpen = true; paint();
+      dd.ui.toast("Filled in typical amounts. Change any to match your label.", 3000);
     });
+    var cv = q("[data-clearvals]"); if (cv) cv.addEventListener("click", function () { collect(); w.vals = {}; paint(); });
     q("[data-save]").addEventListener("click", function () {
       collect();
       if (!w.name) { dd.ui.status(q("[data-st]"), "warn", "Give it a name first."); return; }
       if (!(w.slots || []).length) { dd.ui.status(q("[data-st]"), "warn", "Pick at least one time of day."); return; }
-      var item = { id: r ? r.id : dd.ui.uid("g"), kind: w.kind, name: w.name, dose: w.dose || "", ref: med ? "" : (w.ref || ""), servings: w.servings || 1, slots: w.slots.slice(), days: (w.days || []).slice(), note: w.note || "" };
-      dd.update(function (dt) { dt.regimen = (dt.regimen || []).filter(function (x) { return x.id !== item.id; }).concat([item]); });
-      dd.ui.toast("Saved " + item.name + ".");
+      var keys = Object.keys(w.vals), linkId = r && /^c:/.test(r.ref || "") ? r.ref.slice(2) : null, food = null;
+      if (keys.length) {
+        var per = {}; IK_N.forEach(function (n) { per[n.k] = w.vals[n.k] != null ? w.vals[n.k] : null; });
+        food = { id: linkId || dd.ui.uid("c"), name: w.name, kind: "supplement", perServing: per, servingG: null, src: "checklist", used: new Date().toISOString() };
+      }
+      var item = { id: r ? r.id : dd.ui.uid("g"), kind: w.kind, name: w.name, dose: w.dose || "", ref: food ? "c:" + food.id : "", servings: 1, slots: w.slots.slice(), days: (w.days || []).slice(), note: w.note || "" };
+      dd.update(function (dt) {
+        if (food) dt.customFoods = (dt.customFoods || []).filter(function (x) { return x.id !== food.id; }).concat([food]);
+        dt.regimen = (dt.regimen || []).filter(function (x) { return x.id !== item.id; }).concat([item]);
+      });
+      dd.ui.toast("Saved " + item.name + (food ? ": " + keys.length + (keys.length === 1 ? " nutrient counts" : " nutrients count") + " each time you take it." : "."), 3500);
       ikOpenRegimen();
     });
     var dl = q("[data-del]"); if (dl) dl.addEventListener("click", function () {
@@ -10565,7 +10601,7 @@ const DD_PROGRAM = {
 
   knowledge: "Intake is a food tracker. The person snaps photos of food (the photo screen sends the photo to the AI once, then code works out every nutrient from the food table) or tells {name} what they ate. " +
     "Screens: Today (a medications checklist, a nutrient balance chart: a radar where each spoke is a nutrient as % of target with a 7-day average shape behind it, plus sugar, saturated fat and sodium limit bars; a vitamins & supplements checklist; a Body & health card of gauges; Hydration with three cup buttons; nutrient rows; small bars; the food list grouped Morning, Afternoon, Evening, then Drinks & supplements; a tip), " +
-    "MEDICATIONS & VITAMINS (V5): the person sets a daily checklist (menu → My medications & vitamins): name, dose, times (morning, noon, evening, bedtime or a set time) and days. Tapping one marks it taken (it greys out; tap again to undo). A vitamin linked to nutrients logs a supplement entry. Use mark_dose when they say they took something on the list. Never give dosing advice: that is for their doctor or pharmacist. " +
+    "MEDICATIONS & VITAMINS (V5): the person sets a daily checklist (menu → My medications & vitamins): name, dose, times (morning, noon, evening, bedtime or a set time), days, and what's in each dose (any nutrient the app tracks, e.g. 27 g protein in a scoop of protein powder, or sodium in a medicine). Tapping one marks it taken (it greys out; tap again to undo). A vitamin linked to nutrients logs a supplement entry. Use mark_dose when they say they took something on the list. Never give dosing advice: that is for their doctor or pharmacist. " +
     "Trends (day, week, month or year: charts for energy, protein/carbs/fat, kinds of fat, vitamins and minerals; what's running low) and Advice (weekly check-in, running low, upper limits, 'How much should I have?'). " +
     "The menu (the app's name, top left) has Snap my food, Add by typing, Snap a Nutrition Facts label, My medications & vitamins, My cups, My profile & targets, My recipes & foods, About the numbers. " +
     "RULES: Numbers come from the program's code, never from you. To know amounts or totals, call get_nutrients or get_patterns and quote their numbers. Never calculate nutrients yourself. " +
