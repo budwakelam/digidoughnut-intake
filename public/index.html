@@ -1018,6 +1018,9 @@ input[type=time].ik-input::-webkit-date-and-time-value,input[type=date].ik-input
 .ik-dose.taken b{text-decoration:line-through}
 .ik-regsetup{display:flex;align-items:center;gap:12px;width:100%;border:2px dashed #d2d2d7;font:inherit;color:inherit;text-align:left;cursor:pointer;font-size:15px}
 .ik-regsetup>span:first-child{font-size:24px}
+.ik-regfill{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:2px 0 4px}
+.ik-regfill .ik-btn{min-height:46px;padding:8px 10px;font-size:14.5px;white-space:nowrap}
+.ik-regfill .ik-btn.soft{background:#fff;border:1.5px solid #d2d2d7}
 @media (prefers-reduced-motion:reduce){.ik-radarshape.ik-anim{animation:none}}
 
 </style>
@@ -4962,7 +4965,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
         "USE THE TOOLS: never describe button steps instead, and never say you can't click buttons. Call a tool once for each thing to change. " +
         "After changing something, confirm it in one short sentence. Every change you make can be undone with the Undo button under your reply, so don't ask permission for small changes. " +
         "If a tool says the person must confirm first, tell them in one sentence to tap Yes under your reply. If what they want is unclear, ask one short question first. " : "") +
-      "Answer in plain everyday words, 1 to 3 short sentences unless they ask for more. Say 'free access code', never 'API key'. Never show code, JSON or error text. " +
+      "Answer in plain everyday words, 1 to 3 short sentences unless they ask for more. Write plain text only: no markdown, no ** or # or bullet symbols. Say 'free access code', never 'API key'. Never show code, JSON or error text. " +
       "Use only the real data below; never make up items or numbers. Don't give tax, legal or medical advice beyond suggesting a professional. " +
       (dd.isExample() ? "Right now the program is showing EXAMPLE data, not theirs. " : "") +
       (waitingAsks().length ? "The person's own AI agent (a separate assistant, like Muse) asked for a big change that is WAITING for their answer: " +
@@ -8188,7 +8191,7 @@ function ikDoseCard(d, day, kind) {
 }
 function ikRegSetupCard() {
   return '<button class="ik-card ik-regsetup" data-act="regimen"><span aria-hidden="true">💊</span><span class="ik-grow"><b>Daily vitamins &amp; medications</b><br>' +
-    '<span class="ik-small">Set them up once, then tap each one when you take it.</span></span><span aria-hidden="true">›</span></button>';
+    '<span class="ik-small">Snap the bottle or tell DigiBot once, then tap each one when you take it.</span></span><span aria-hidden="true">›</span></button>';
 }
 function ikToggleDose(key) {
   var p = key.split("|"), day = IK_UI.day || ikToday(), d = dd.getData();
@@ -8207,6 +8210,8 @@ function ikOpenRegimen() {
   var meds = ikRegItems(d, "med"), supps = ikRegItems(d, "supp");
   sh.innerHTML = '<div class="ik-sheettop"><h2>Medications &amp; vitamins</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
     '<p class="ik-small" style="margin-top:0">They show on Today as a checklist at the times you set. Tap one when you take it: it greys out, and tapping again undoes it. Give any item what\'s in each dose (protein, sodium, any vitamin or mineral) and it counts toward your day.</p>' +
+    '<div class="ik-regfill" style="margin-bottom:6px"><button class="ik-btn" data-scan>📷 Snap a bottle</button>' + (dd.helper ? '<button class="ik-btn soft" data-askbot>💬 Tell ' + ikEsc(dd.helper.name()) + "</button>" : "") + "</div>" +
+    '<p class="ik-small" style="margin:0 0 4px">A photo of the bottle, box, Supplement Facts panel or barcode fills in the name, dose and what\'s in it.</p>' +
     '<h3 class="ik-sechead">💊 Medications</h3>' + (meds.length ? '<div class="ik-hits" style="max-height:none">' + meds.map(row).join("") + "</div>" : '<p class="ik-small">None yet.</p>') +
     '<button class="ik-btn soft" data-new="med" style="margin:8px 0 14px">＋ Add a medication</button>' +
     '<h3 class="ik-sechead">🌿 Vitamins &amp; supplements</h3>' + (supps.length ? '<div class="ik-hits" style="max-height:none">' + supps.map(row).join("") + "</div>" : '<p class="ik-small">None yet.</p>') +
@@ -8214,6 +8219,8 @@ function ikOpenRegimen() {
     '<p class="ik-small">Intake can\'t send phone reminders when it\'s closed. The checklist shows what\'s due whenever you open it. Always take medicine the way your doctor or pharmacist told you.</p>';
   sh.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
   sh.querySelectorAll("[data-new]").forEach(function (b) { b.addEventListener("click", function () { ikEditRegimen(b.getAttribute("data-new"), null); }); });
+  sh.querySelector("[data-scan]").addEventListener("click", function () { ikRegScan(null, null, null); });
+  var ab = sh.querySelector("[data-askbot]"); if (ab) ab.addEventListener("click", function () { ikAskBotRegimen(null); });
   sh.querySelectorAll("[data-edit]").forEach(function (b) { b.addEventListener("click", function () { var r = ikRegItems(dd.getData()).filter(function (x) { return x.id === b.getAttribute("data-edit"); })[0]; if (r) ikEditRegimen(r.kind, r.id); }); });
 }
 /* V5.2 (Oran, 2026-10-14: "protein powder needs its 27 g of protein, and a medication may add sodium").
@@ -8231,6 +8238,18 @@ function ikRegDoseVals(d, r) {
   }
   if (src) Object.keys(src).forEach(function (k) { if (src[k] != null && isFinite(src[k]) && IK_NBY[k]) vals[k] = +(src[k] * mult).toPrecision(4); });
   return vals;
+}
+function ikRegFillHtml(w, med) {
+  var name = dd.helper ? dd.helper.name() : "DigiBot", S = w.scan, h = "";
+  if (S && S.busy) return '<div class="ik-working" style="margin:0 0 6px"><span class="ik-spin" aria-hidden="true"></span><span class="ik-grow">' + ikEsc(name) + ' is reading your photo…</span><button class="ik-link" data-scanstop>Stop</button></div>';
+  h += '<div class="ik-regfill"><button class="ik-btn soft" data-scan>📷 Snap the label</button>' +
+    (dd.helper ? '<button class="ik-btn soft" data-askbot>💬 Tell ' + ikEsc(name) + "</button>" : "") + "</div>";
+  if (S && S.err) h += '<div class="ik-warn"><b>' + ikEsc(S.err.title) + "</b> " + ikEsc(S.err.help || "") + "</div>";
+  else if (S && S.done) h += '<div class="ik-warn soft">' + (S.same ? "It's already on your list, so this updates it. " : "") +
+    (S.n ? "Filled in from your " + (S.via === "barcode" ? "barcode" : "photo") + ": " + S.n + (S.n === 1 ? " nutrient" : " nutrients") + " per dose. " : "Filled in the name from your photo. No nutrient amounts were printed. ") +
+    "Check everything against the label, then tap Save." + (S.unknown && S.unknown.length ? '<br><span class="ik-small">Not tracked by Intake: ' + ikEsc(S.unknown.join(", ")) + ".</span>" : "") + "</div>";
+  else h += '<p class="ik-small" style="margin:6px 0 0">Snap the front of the ' + (med ? "box or the pharmacy label" : "bottle, the Supplement Facts panel") + " or the barcode and " + ikEsc(name) + " fills this in for you to check. Or just tell " + ikEsc(name) + " what you take.</p>";
+  return h;
 }
 function ikEditRegimen(kind, id, state) {
   var d = dd.getData(), r = id ? ikRegItems(d).filter(function (x) { return x.id === id; })[0] : null;
@@ -8260,8 +8279,8 @@ function ikEditRegimen(kind, id, state) {
     var more = IK_N.filter(function (n) { return IK_REG_MAIN.indexOf(n.k) < 0 && n.k !== "water" && n.k !== "added"; }), lastG = "";
     var filled = Object.keys(w.vals).length, moreFilled = more.some(function (n) { return w.vals[n.k] != null; });
     var nutrOpen = w.nutrOpen != null ? w.nutrOpen : (!med || filled > 0);
-    sh.innerHTML = '<div class="ik-sheettop"><h2>' + (r ? "Edit " + ikEsc(r.name) : med ? "Add a medication" : "Add a vitamin or supplement") + '</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' +
-      '<label class="ik-label" style="margin-top:0">Name</label><input class="ik-input" data-n maxlength="60" value="' + ikEsc(w.name) + '" placeholder="' + (med ? "e.g. Ramipril" : "e.g. Protein powder") + '">' +
+    sh.innerHTML = '<div class="ik-sheettop"><h2>' + (r ? "Edit " + ikEsc(r.name) : med ? "Add a medication" : "Add a vitamin or supplement") + '</h2><button class="ik-x" data-close aria-label="Close">✕</button></div>' + ikRegFillHtml(w, med) +
+      '<label class="ik-label">Name</label><input class="ik-input" data-n maxlength="60" value="' + ikEsc(w.name) + '" placeholder="' + (med ? "e.g. Ramipril" : "e.g. Protein powder") + '">' +
       '<label class="ik-label">Dose (optional)</label><input class="ik-input" data-ds maxlength="40" value="' + ikEsc(w.dose || "") + '" placeholder="' + (med ? "e.g. 1 tablet, 10 mg" : "e.g. 1 scoop, 2 capsules") + '">' +
       (hint && !ikMed(dd0, hint) ? '<div class="ik-warn soft">💡 Turn on <b>' + (hint === "warfarin" ? "A blood thinner (warfarin)" : "A statin") + '</b> in Home screen &amp; health to get food warnings for it. <button class="ik-link" data-medon="' + hint + '">Turn it on</button></div>' : "") +
       '<details class="ik-card ik-more" data-nutr' + (nutrOpen ? " open" : "") + ' style="margin-top:12px"><summary>' + (med ? "Does it add any nutrients? (most medicines don't)" : "What's in each dose") + (filled ? " · " + filled + " set" : "") + "</summary>" +
@@ -8282,7 +8301,10 @@ function ikEditRegimen(kind, id, state) {
       '<div class="dd-status" data-st></div><button class="ik-btn wide" data-save style="margin-top:12px">Save</button>' +
       (r ? '<button class="ik-link" data-del style="color:var(--ik-high);display:block;margin:10px auto 0">Remove from my checklist</button>' : "");
     var q = function (s) { return sh.querySelector(s); };
-    q("[data-close]").addEventListener("click", function () { ikOpenRegimen(); });
+    q("[data-close]").addEventListener("click", function () { w.scan = null; ikOpenRegimen(); });
+    var sc = q("[data-scan]"); if (sc) sc.addEventListener("click", function () { collect(); ikRegScan(w.kind, r ? r.id : null, w); });
+    var ab = q("[data-askbot]"); if (ab) ab.addEventListener("click", function () { ikAskBotRegimen(w.kind); });
+    var ss = q("[data-scanstop]"); if (ss) ss.addEventListener("click", function () { collect(); dd.ai.stop(); w.scan = null; paint(); });
     sh.querySelectorAll("[data-slot]").forEach(function (b) { b.addEventListener("click", function () {
       collect(); var s = b.getAttribute("data-slot"), i = (w.slots || []).indexOf(s);
       w.slots = (w.slots || []).slice(); if (i >= 0) w.slots.splice(i, 1); else w.slots.push(s); paint();
@@ -8325,6 +8347,172 @@ function ikEditRegimen(kind, id, state) {
     });
   }
   paint();
+}
+
+/* V5.3 (Oran, 2026-10-14: "prompt them to scan it… a picture of the container or ingredients list, or a barcode, and
+   DigiBot wherever it makes sense"). A photo of a bottle, box, Supplement Facts panel or barcode fills in a checklist
+   item: name, dose, directions and what's in one dose. The person checks it and taps Save (nothing is saved before).
+   A barcode alone is looked up in Open Food Facts (free, open). The AI only reads; code converts the units. */
+var IK_IU = { vitD: 1 / 40, vitE: 0.67, vitA: 0.3 };   // IU → µg (D), mg (E, natural), µg RAE (A, retinol)
+function ikUnitConv(k, amount, unit) {
+  var nt = IK_NBY[k], v = Number(amount); if (!nt || !isFinite(v) || v < 0) return null;
+  var u = String(unit || "").toLowerCase().replace(/\s+/g, "").replace("mcg", "µg").replace(/^ug$/, "µg").replace("μg", "µg");
+  if (/%|dv/.test(u)) return null;
+  if (!u || u === nt.unit.toLowerCase()) return v;
+  if (u === "iu") return IK_IU[k] ? +(v * IK_IU[k]).toPrecision(4) : null;
+  if (k === "kcal") return u === "kj" ? Math.round(v / 4.184) : u === "cal" || u === "calories" ? v : null;
+  var mass = { g: 1e6, mg: 1e3, "µg": 1 }, from = mass[u], to = mass[nt.unit === "mg" ? "mg" : nt.unit === "g" ? "g" : nt.unit === "µg" ? "µg" : ""];
+  return from && to ? +(v * from / to).toPrecision(4) : null;
+}
+/* A label line ("Vitamin D3 (cholecalciferol)", "Total Carbohydrate") → a nutrient key. */
+function ikLabelKey(name) {
+  var s = String(name || "").toLowerCase().replace(/\(.*?\)/g, " ").replace(/\b(total|dietary|as [a-z ]+)\b/g, " ").replace(/\s+/g, " ").trim();
+  var exact = IK_N.filter(function (n) { return n.label.toLowerCase() === String(name || "").toLowerCase().trim(); })[0];
+  if (exact) return exact.k;
+  if (/^(epa|dha|eicosapentaenoic|docosahexaenoic|epa ?\+ ?dha|omega-?3 \(?epa)/.test(s)) return "epadha";
+  if (/^vitamin d ?[23]?$/.test(s)) return "vitD";
+  if (/^vitamin k ?[12]?$/.test(s)) return "vitK";
+  if (/^thiamine?/.test(s)) return "b1";
+  if (/^(niacin|niacinamide)/.test(s)) return "b3";
+  if (/^(folate|folic acid|methylfolate)/.test(s)) return "folate";
+  if (/^(pantothen|vitamin b5)/.test(s)) return "b5";
+  if (/^(vitamin b1|vitamin b-1)$/.test(s)) return "b1";
+  if (/^(vitamin b2|vitamin b-2)$/.test(s)) return "b2";
+  if (/^(vitamin b3|vitamin b-3)$/.test(s)) return "b3";
+  if (/^(vitamin b-?6)$/.test(s)) return "b6";
+  if (/^(vitamin b-?12|cobalamin|cyanocobalamin|methylcobalamin)$/.test(s)) return "b12";
+  if (/^(sugars?|total sugars)$/.test(s)) return "sugar";
+  if (/^(calories|energy)$/.test(s)) return "kcal";
+  if (/^salt$/.test(s)) return null;   // salt is converted to sodium by the caller
+  var k = ikNutrientKey(s);
+  return k && IK_NBY[k] ? k : null;
+}
+/* Nutrient lines → {vals, set:[labels], unknown:[names]}. Salt (g) becomes sodium; EPA and DHA add up. */
+function ikLabelVals(lines) {
+  var vals = {}, set = [], unknown = [];
+  (lines || []).forEach(function (x) {
+    if (!x || x.amount == null) return;
+    var nm = String(x.nutrient || "").trim(), k = ikLabelKey(nm), v;
+    if (!k && /^salt$/i.test(nm)) {   // 1 g of salt has about 393 mg of sodium
+      var su = String(x.unit || "g").toLowerCase(), sg = su === "mg" ? Number(x.amount) / 1000 : su === "g" ? Number(x.amount) : NaN;
+      if (isFinite(sg) && vals.na == null) { k = "na"; v = Math.round(sg * 393); }
+    }
+    else if (k) v = ikUnitConv(k, x.amount, x.unit);
+    if (!k || v == null) { if (nm && !/%/.test(String(x.unit || ""))) unknown.push(nm); return; }
+    vals[k] = k === "epadha" && vals[k] != null ? +(vals[k] + v).toPrecision(4) : v;
+  });
+  Object.keys(vals).forEach(function (k) { set.push(IK_NBY[k].label); });
+  return { vals: vals, set: set, unknown: unknown.filter(function (u, i) { return unknown.indexOf(u) === i; }).slice(0, 8) };
+}
+/* Open Food Facts: values are per serving (or per 100 g) in grams, energy in kcal. */
+var IK_OFF = { kcal: "energy-kcal", protein: "proteins", fat: "fat", sat: "saturated-fat", trans: "trans-fat", chol: "cholesterol", carb: "carbohydrates", fibre: "fiber", sugar: "sugars",
+  na: "sodium", k: "potassium", ca: "calcium", fe: "iron", mg: "magnesium", zn: "zinc", p: "phosphorus", se: "selenium", cu: "copper", mn: "manganese", caffeine: "caffeine",
+  vitA: "vitamin-a", vitC: "vitamin-c", vitD: "vitamin-d", vitE: "vitamin-e", vitK: "vitamin-k", b1: "vitamin-b1", b2: "vitamin-b2", b3: "vitamin-pp", b5: "pantothenic-acid",
+  b6: "vitamin-b6", folate: "vitamin-b9", b12: "vitamin-b12", choline: "choline" };
+function ikBarcodeLookup(code) {
+  code = String(code || "").replace(/\D/g, "");
+  if (code.length < 8 || code.length > 14 || typeof fetch !== "function") return Promise.resolve(null);
+  var ac = typeof AbortController === "function" ? new AbortController() : null, t = setTimeout(function () { if (ac) ac.abort(); }, 8000);
+  return fetch("https://world.openfoodfacts.org/api/v2/product/" + code + ".json?fields=product_name,brands,serving_size,nutriments", ac ? { signal: ac.signal } : {})
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) {
+      clearTimeout(t);
+      var p = j && j.status === 1 && j.product; if (!p) return null;
+      var n = p.nutriments || {}, per = Object.keys(n).some(function (x) { return /_serving$/.test(x); }) ? "_serving" : null, vals = {};
+      if (per) Object.keys(IK_OFF).forEach(function (k) {
+        var raw = n[IK_OFF[k] + per]; if (raw == null || !isFinite(+raw)) return;
+        var v = k === "kcal" ? +raw : ikUnitConv(k, +raw, "g"); if (v != null) vals[k] = +(+v).toPrecision(4);
+      });
+      return { name: [p.brands && String(p.brands).split(",")[0], p.product_name].filter(Boolean).join(" ").slice(0, 60), dose: p.serving_size ? String(p.serving_size).slice(0, 40) : "", vals: vals, perServing: !!per };
+    }).catch(function () { clearTimeout(t); return null; });
+}
+function ikDetectBarcode(image) {
+  if (typeof window.BarcodeDetector !== "function" || !image || !image.dataUrl) return Promise.resolve(null);
+  return new Promise(function (res) {
+    var img = new Image();
+    img.onload = function () {
+      try { new window.BarcodeDetector({ formats: ["ean_13", "ean_8", "upc_a", "upc_e"] }).detect(img).then(function (c) { res(c && c[0] ? c[0].rawValue : null); }, function () { res(null); }); }
+      catch (e) { res(null); }
+    };
+    img.onerror = function () { res(null); };
+    img.src = image.dataUrl;
+  });
+}
+/* Read a photo of a bottle, box, label or barcode. Resolves {ok, name, kind, dose, slots, note, vals, set, unknown, via} or {ok:false, title, help}. */
+function ikRegRead(image, kindHint) {
+  var got = null, names = IK_N.filter(function (n) { return n.k !== "water" && n.k !== "added"; }).map(function (n) { return n.label; }).join(", ");
+  var system = "You read photos of vitamin, supplement and medicine containers for a daily checklist: the bottle or box, the Supplement Facts or Nutrition Facts panel, the ingredients list, the directions, or a barcode. " +
+    "Call read_container once. Copy what is printed; never guess numbers that aren't printed. product: brand, product and strength (like 'Jamieson Vitamin D3 1,000 IU' or 'Ramipril 5 mg'). " +
+    "kind: medication for a prescription or pharmacy medicine (a DIN, Rx, or a pharmacy label), otherwise supplement (vitamins, minerals, fish oil, protein powder, fibre, probiotics). " +
+    "dose: the amount in ONE serving or dose as the label says (like '1 tablet', '1 scoop (30 g)'). nutrients: every nutrient amount printed for that one serving, with the unit exactly as printed (g, mg, mcg, µg, IU, kcal). " +
+    "Use these names when they apply: " + names + ". Medicinal ingredients that aren't nutrients (like ramipril) are not nutrients: leave them out. Leave out % Daily Value columns. " +
+    "times: only if the directions say when (morning, noon, evening, bedtime); otherwise leave it empty. note: a short direction worth remembering, like 'with food'. " +
+    "barcode: the digits printed under a barcode if one is visible. readable=false if you can't read the label at all.";
+  var tool = { name: "read_container", description: "Report what's printed on the container or label.",
+    params: { readable: { type: "boolean" }, product: { type: "string", optional: true }, kind: { type: "string", enum: ["supplement", "medication"], optional: true },
+      dose: { type: "string", optional: true }, times: { type: "array", items: { type: "string" }, optional: true }, note: { type: "string", optional: true },
+      nutrients: { type: "array", optional: true, items: { type: "object", properties: { nutrient: { type: "string" }, amount: { type: "number" }, unit: { type: "string" } }, required: ["nutrient", "amount"] } },
+      barcode: { type: "string", optional: true } },
+    run: function (a) { got = a; return { ok: true }; } };
+  var bar = ikDetectBarcode(image);
+  var ai = dd.ai.chat({ system: system, history: [{ role: "user", text: "Read this " + (kindHint === "med" ? "medicine" : kindHint === "supp" ? "vitamin or supplement" : "vitamin, supplement or medicine") + " container.", images: [{ mime: image.mime, data: image.data }] }],
+    tools: [tool], forceTool: tool.name, once: true, hedge: false, tier: "full" });
+  return Promise.all([ai, bar]).then(function (rr) {
+    var r = rr[0], code = rr[1] || (got && got.barcode);
+    if (!r.ok && !code) return { ok: false, title: r.title, help: r.help };
+    var g = got || {}, lv = ikLabelVals(g.nutrients), slots = [];
+    (g.times || []).forEach(function (t) { var x = String(t).toLowerCase(); var s = /morn|breakfast/.test(x) ? "morning" : /noon|lunch/.test(x) ? "noon" : /bed|night/.test(x) ? "bedtime" : /even|supper|dinner/.test(x) ? "evening" : null; if (s && slots.indexOf(s) < 0) slots.push(s); });
+    var out = { ok: true, name: String(g.product || "").trim().slice(0, 60), kind: g.kind === "medication" ? "med" : g.kind === "supplement" ? "supp" : kindHint || "supp",
+      dose: String(g.dose || "").trim().slice(0, 40), slots: slots, note: String(g.note || "").trim().slice(0, 120), vals: lv.vals, set: lv.set, unknown: lv.unknown, via: "photo" };
+    if (Object.keys(out.vals).length || (g.readable !== false && out.name && !code)) return out;
+    if (!code) return g.readable === false ? { ok: false, title: "I couldn't read that label.", help: "Try again closer, in good light, with the Supplement Facts panel or the box's front filling the photo." } : out;
+    return ikBarcodeLookup(code).then(function (p) {
+      if (p && (p.name || Object.keys(p.vals).length)) return { ok: true, name: out.name || p.name, kind: out.kind, dose: out.dose || p.dose, slots: slots, note: out.note, vals: p.vals,
+        set: Object.keys(p.vals).map(function (k) { return IK_NBY[k].label; }), unknown: [], via: "barcode", perServing: p.perServing };
+      if (out.name) return out;
+      return { ok: false, title: "That barcode isn't in the free product database.", help: "Snap the Supplement Facts panel or the front of the box instead, and I'll read it." };
+    });
+  });
+}
+/* Pick a photo, read it, and open the checklist form filled in (or update the form already open). */
+function ikRegScan(kind, id, w, image) {
+  var name = dd.helper ? dd.helper.name() : "DigiBot";
+  if (!(dd.ai && dd.ai.hasCode())) { dd.ui.closeSheet(); dd.setup.needAI("To read a label, " + name + " needs a free access code from Google."); return; }
+  var go = function (img) {
+    var state = w || { kind: kind || "supp", name: "", dose: "", ref: "", slots: ["morning"], days: [], note: "", vals: {} };
+    state.scan = { busy: true };
+    ikEditRegimen(state.kind, id, state);
+    ikRegRead(img, kind).then(function (res) {
+      if (!state.scan) return;
+      if (!res.ok) { state.scan = { err: res }; ikEditRegimen(state.kind, id, state); return; }
+      var d = dd.getData(), same = !id && res.name ? ikRegItems(d).filter(function (x) { return x.name.toLowerCase() === res.name.toLowerCase(); })[0] : null;
+      if (same) { id = same.id; var base = JSON.parse(JSON.stringify(same)); base.vals = ikRegDoseVals(d, same); state = Object.assign(base, { scan: null }); }
+      if (!id) state.kind = res.kind;
+      if (res.name && (!state.name || !id)) state.name = res.name;
+      if (res.dose && (!state.dose || !id)) state.dose = res.dose;
+      if (res.note && !state.note) state.note = res.note;
+      if (res.slots.length && !id) state.slots = res.slots;
+      if (Object.keys(res.vals).length) { state.vals = res.vals; state.nutrOpen = true; if (Object.keys(res.vals).some(function (k) { return IK_REG_MAIN.indexOf(k) < 0; })) state.moreOpen = true; }
+      state.scan = { done: true, via: res.via, n: Object.keys(res.vals).length, unknown: res.unknown, same: !!same };
+      ikEditRegimen(state.kind, id, state);
+    });
+  };
+  if (image) { go(image); return; }
+  dd.files.pick({ accept: "image/*" }).then(function (f) {
+    if (!f) return;
+    dd.files.readImage(f, 1280).then(function (r) { if (!r.ok) { dd.ui.toast(r.title + (r.help ? " " + r.help : ""), 5000); return; } go(r.image); });
+  });
+}
+/* DigiBot, opened for the checklist: she can add, change or remove items herself. A photo sent from her chat
+   opens on the "Vitamin or medicine" setting for the next ten minutes. */
+function ikAskBotRegimen(kind) {
+  var name = dd.helper ? dd.helper.name() : "DigiBot";
+  dd.ui.closeSheet();
+  IK_UI.photoNext = { mode: "regimen", kind: kind || null, until: Date.now() + 10 * 60000 };
+  dd.helper.say("Tell me what you take and I'll put it on your checklist: the name, when you take it, and what's in one dose if you know it. " +
+    "For example: \"a scoop of whey protein every morning, 27 g protein and 120 calories\" or \"ramipril 5 mg at bedtime\". " +
+    "Not sure what's in it? Tap + below and send me a photo of the bottle, the box, the Supplement Facts panel or the barcode, and I'll read it.",
+    { chips: kind === "med" ? ["Add a medication I take at bedtime", "What's on my checklist?"] : ["Add my protein powder: 27 g protein a scoop, every morning", "What's on my checklist?"] });
 }
 
 /* ===== V3 (2026-10-13): the instrument cluster =====
@@ -9519,7 +9707,8 @@ var IK_SIZE_REFS = [
 function ikPhotoStart(image, opts) {
   opts = opts || {};
   var d = dd.getData(), day = IK_UI.day || ikToday(), time = day === ikToday() ? ikNowTime() : "12:00";
-  IK_P = { image: image, mode: opts.label ? "label" : opts.drink ? "drink" : "food", size: null, note: "", day: day, time: time, part: ikPartOf(time), stage: "ready", items: [], label: null, busy: false, err: null };
+  var nx = IK_UI.photoNext && IK_UI.photoNext.until > Date.now() && !opts.label && !opts.drink ? IK_UI.photoNext.mode : null;
+  IK_P = { image: image, mode: opts.regimen || nx === "regimen" ? "regimen" : opts.label ? "label" : opts.drink ? "drink" : "food", size: null, note: "", day: day, time: time, part: ikPartOf(time), stage: "ready", items: [], label: null, busy: false, err: null };
   if (dd.helper && dd.helper.close) dd.helper.close();
   var sh = dd.ui.sheet("", { sticky: true, onClose: function () { IK_P = null; }, onOutside: function () { dd.ui.toast("Tap ✕ to close. Nothing is added until you tap Add."); } });
   sh.classList.add("ik-sheet");
@@ -9574,15 +9763,17 @@ function ikPhotoPaint() {
   if (P.stage === "ready" || P.stage === "error") {
     h += '<div class="ik-chips" role="group" aria-label="This photo is">' +
       '<button class="ik-chip" data-mode="food" aria-pressed="' + (P.mode === "food") + '">🍽️ My food</button>' +
-      '<button class="ik-chip" data-mode="label" aria-pressed="' + (P.mode === "label") + '">🏷️ A label</button></div>';
+      '<button class="ik-chip" data-mode="label" aria-pressed="' + (P.mode === "label") + '">🏷️ A label</button>' +
+      '<button class="ik-chip" data-mode="regimen" aria-pressed="' + (P.mode === "regimen") + '">💊 Vitamin or medicine</button></div>';
     if (P.mode === "drink") h += '<p class="ik-small" style="margin:8px 0 0">' + ikEsc(name) + " works out how much is in the glass, cup or bottle and adds it to today's drinks. Water counts toward staying hydrated.</p>";
     if (P.mode === "food" || P.mode === "drink") {
       h += '<div class="ik-label">Something in the photo for size? (optional)</div><div class="ik-chips">' + IK_SIZE_REFS.map(function (s) {
         return '<button class="ik-chip" data-size="' + s.k + '" aria-pressed="' + (P.size === s.k) + '">' + s.label + "</button>"; }).join("") + "</div>";
       h += '<label class="ik-label" for="ikNote">Anything ' + ikEsc(name) + ' should know? (optional)</label><input class="ik-input" id="ikNote" data-note placeholder="e.g. big plate, half eaten, made with olive oil" value="' + ikEsc(P.note) + '">';
-    } else h += '<p class="ik-small">' + ikEsc(name) + " reads the numbers on the label exactly, so this is the best way to get a packaged food right.</p>";
+    } else if (P.mode === "regimen") h += '<p class="ik-small">' + ikEsc(name) + " reads the bottle, box, Supplement Facts panel or barcode and fills in your daily checklist: the name, the dose and what's in it. You check it, then tap Save.</p>";
+    else h += '<p class="ik-small">' + ikEsc(name) + " reads the numbers on the label exactly, so this is the best way to get a packaged food right.</p>";
     if (P.err) h += '<div class="ik-warn"><b>' + ikEsc(P.err.title) + "</b> " + ikEsc(P.err.help || "") + "</div>";
-    h += '<button class="ik-btn wide" data-look style="margin-top:14px">' + (P.mode === "label" ? "Read the label" : P.mode === "drink" ? "Look at my drink" : "Look at my food") + "</button>" +
+    h += '<button class="ik-btn wide" data-look style="margin-top:14px">' + (P.mode === "label" ? "Read the label" : P.mode === "regimen" ? "Add it to my checklist" : P.mode === "drink" ? "Look at my drink" : "Look at my food") + "</button>" +
       '<p class="ik-small" style="text-align:center;margin:10px 0 0">The photo goes to Google with this one request and is never saved. Only the foods and numbers are kept.</p>';
   } else if (P.stage === "looking") {
     h += '<div class="ik-working"><span class="ik-spin" aria-hidden="true"></span><span class="ik-grow">' + ikEsc(name) + " is looking at your photo…</span><button class=\"ik-link\" data-stop>Stop</button></div>";
@@ -9592,6 +9783,7 @@ function ikPhotoPaint() {
       '<div class="ik-small">Per serving' + (L.serving_g ? " (" + ikNum(L.serving_g, 0) + " g)" : "") + ": " + ikNum(L.kcal, 0) + " kcal · protein " + ikNum(L.protein, 1) + " g · fat " + ikNum(L.fat, 1) + " g · carbs " + ikNum(L.carb, 1) + " g · fibre " + ikNum(L.fibre, 1) + " g · sodium " + ikNum(L.sodium_mg, 0) + " mg</div>" +
       '<label class="ik-label">How many servings did you have?</label><input class="ik-input" type="number" inputmode="decimal" min="0.25" step="0.25" data-lserv value="' + ikEsc(String(P.lserv || 1)) + '" style="max-width:140px">' +
       '<label class="ik-label"><input type="checkbox" data-lsupp' + (L.supplement ? " checked" : "") + '> This is a supplement</label></div>' +
+      (L.supplement ? '<button class="ik-btn soft wide" data-tochk style="margin-bottom:8px">💊 Put it on my daily checklist instead</button>' : "") +
       '<button class="ik-btn wide" data-addlabel>Save it and add to ' + ikEsc(ikDayName(P.day).toLowerCase() === "today" ? "today" : ikDayName(P.day)) + "</button>" +
       '<p class="ik-small" style="text-align:center">Saved under My foods, so next time you can add it by typing its name.</p>';
   } else if (P.stage === "results") {
@@ -9696,6 +9888,7 @@ function ikPhotoWire() {
   var addAll = q("[data-addall]"); if (addAll) addAll.addEventListener("click", ikPhotoAdd);
   var ls = q("[data-lserv]"); if (ls) ls.addEventListener("input", function () { P.lserv = Math.max(0.25, Number(ls.value) || 1); });
   var al = q("[data-addlabel]"); if (al) al.addEventListener("click", ikLabelAdd);
+  var tc = q("[data-tochk]"); if (tc) tc.addEventListener("click", function () { var img = P.image; dd.ui.closeSheet(); ikRegScan("supp", null, null, img); });
 }
 function ikPhotoSetG(i, g, from) {
   var P = IK_P, it = P.items[i]; if (!it || !(g > 0)) return;
@@ -9713,6 +9906,7 @@ function ikPhotoSetG(i, g, from) {
 function ikPhotoLook() {
   var P = IK_P, d = dd.getData(), name = dd.helper ? dd.helper.name() : "DigiBot";
   if (!(dd.ai && dd.ai.hasCode())) { dd.ui.closeSheet(); dd.setup.needAI("To look at photos, " + name + " needs a free access code from Google."); return; }
+  if (P.mode === "regimen") { var img = P.image; dd.ui.closeSheet(); ikRegScan(null, null, null, img); return; }
   P.stage = "looking"; P.err = null; ikPhotoPaint();
   var got = null, isLabel = P.mode === "label";
   var size = IK_SIZE_REFS.filter(function (s) { return s.k === P.size; })[0];
@@ -10581,8 +10775,8 @@ const DD_PROGRAM = {
   /* Photos: the menu's "Add a food photo", the + in the helper's chat, and dropping a photo on the page
      all open the photo screen. The photo is shrunk on this device and never saved. */
   files: {
-    accept: "image/*", images: true, imageSize: 1024, label: "a food photo",
-    howTo: "<p>Choose a photo of your meal, or of a Nutrition Facts label. It's shrunk on this device and only sent to Google when you tap <b>Look at my food</b>. It's never saved.</p>",
+    accept: "image/*", images: true, imageSize: 1024, label: "a photo",
+    howTo: "<p>Choose a photo of your meal, a Nutrition Facts label, or a vitamin or medicine bottle (for your daily checklist). It's shrunk on this device and only sent to Google when you tap <b>Look at my food</b>. It's never saved.</p>",
     take: function (file, image) {
       if (!image || !image.data) return { ok: false, message: "That doesn't look like a photo. Choose a picture of your food." };
       setTimeout(function () { ikPhotoStart(image); }, 50);
@@ -10601,9 +10795,9 @@ const DD_PROGRAM = {
 
   knowledge: "Intake is a food tracker. The person snaps photos of food (the photo screen sends the photo to the AI once, then code works out every nutrient from the food table) or tells {name} what they ate. " +
     "Screens: Today (a medications checklist, a nutrient balance chart: a radar where each spoke is a nutrient as % of target with a 7-day average shape behind it, plus sugar, saturated fat and sodium limit bars; a vitamins & supplements checklist; a Body & health card of gauges; Hydration with three cup buttons; nutrient rows; small bars; the food list grouped Morning, Afternoon, Evening, then Drinks & supplements; a tip), " +
-    "MEDICATIONS & VITAMINS (V5): the person sets a daily checklist (menu → My medications & vitamins): name, dose, times (morning, noon, evening, bedtime or a set time), days, and what's in each dose (any nutrient the app tracks, e.g. 27 g protein in a scoop of protein powder, or sodium in a medicine). Tapping one marks it taken (it greys out; tap again to undo). A vitamin linked to nutrients logs a supplement entry. Use mark_dose when they say they took something on the list. Never give dosing advice: that is for their doctor or pharmacist. " +
+    "MEDICATIONS & VITAMINS (V5): the person sets a daily checklist (menu → My medications & vitamins): name, dose, times (morning, noon, evening, bedtime or a set time), days, and what's in each dose (any nutrient the app tracks, e.g. 27 g protein in a scoop of protein powder, or sodium in a medicine). Tapping one marks it taken (it greys out; tap again to undo). A vitamin linked to nutrients logs a supplement entry. YOU CAN SET IT UP: when they ask to add, change or remove a checklist item (a vitamin, protein powder, medication), do it with save_checklist_item / remove_checklist_item, including what each dose contains (any tracked nutrient). Never tell them to do it themselves through the menu. Use list_checklist to see it. PHOTOS OF BOTTLES: when they don't know what's in a dose, tell them to send a photo of the bottle, box, Supplement Facts panel or barcode with the + button in this chat (then pick 💊 Vitamin or medicine), or tap 📷 Snap a bottle or label in My medications & vitamins: the app reads it and fills in the item for them to check and save. If a photo comes with their message, read it and use save_checklist_item with the amounts printed for one dose. Use mark_dose when they say they took something on the list. Cup sizes on the Hydration card: set_cups. Water: log_water. Never give dosing advice: that is for their doctor or pharmacist. " +
     "Trends (day, week, month or year: charts for energy, protein/carbs/fat, kinds of fat, vitamins and minerals; what's running low) and Advice (weekly check-in, running low, upper limits, 'How much should I have?'). " +
-    "The menu (the app's name, top left) has Snap my food, Add by typing, Snap a Nutrition Facts label, My medications & vitamins, My cups, My profile & targets, My recipes & foods, About the numbers. " +
+    "The menu (the app's name, top left) has Snap my food, Add by typing, Snap a Nutrition Facts label, My medications & vitamins (with 📷 Snap a bottle or label), My cups, My profile & targets, My recipes & foods, About the numbers. " +
     "RULES: Numbers come from the program's code, never from you. To know amounts or totals, call get_nutrients or get_patterns and quote their numbers. Never calculate nutrients yourself. " +
     "To log food the person describes, call log_food with ids from the FOOD LIST below and your best gram estimate (use the measures: 1 cup = 250 mL). For something not in the list, pass its name with your per-100 g estimates: it's saved and marked 'estimated'. " +
     "FORGOTTEN OR EARLIER MEALS: when the person tells you about food they had earlier, or says they forgot to log something, and hasn't said when, first ask ONE short question: 'About what time did you have it?' (and which day if it might not be today). " +
@@ -10922,6 +11116,72 @@ DD_PROGRAM.tools = [
       var shown = Object.keys(map).filter(function (a) { return per[map[a]] != null; }).map(function (a) { return IK_NBY[map[a]].label + " " + per[map[a]] + " " + IK_NBY[map[a]].unit; });
       return { ok: true, message: (c ? "Changed" : "Saved") + " " + nm + " (id c:" + food.id + "), per " + (basis === "serving" ? "serving" + (food.servingG ? " of " + food.servingG + " g" : "") : "100 g") + ": " + shown.join(", ") + "." +
         (c && ikFoodUsed(dd.getData(), c.id) ? " This changes every day they had it." : "") + (e ? " Also logged it now." : "") };
+    } },
+  /* V5.2 (Oran, 2026-10-14: "DigiBot said it can't add to my vitamins"): the checklist, cups and own-food actions
+     for DigiBot and the person's own AI agent (both use this one list). */
+  { name: "save_checklist_item", description: "Add a medication, vitamin or supplement to the person's daily checklist, or change one already on it (matched by name). Give what's in each dose with nutrients (any nutrient the app tracks), so ticking it off adds them to the day, e.g. protein powder: protein 27 g.",
+    params: { name: { type: "string" }, kind: { type: "string", enum: ["supplement", "medication"], description: "Vitamins, protein powder, fish oil etc. are supplements" },
+      dose: { type: "string", description: "Like '1 scoop' or '1 tablet'", optional: true },
+      times: { type: "array", description: "When to take it: morning, noon, evening, bedtime, or a 24-hour time like 21:00. Default morning.", items: { type: "string" }, optional: true },
+      days: { type: "array", description: "Weekdays like Mon, Wed, Fri. Leave empty for every day.", items: { type: "string" }, optional: true },
+      nutrients: { type: "array", description: "What one dose contains. Nutrient names like protein, energy (kcal), fibre, carbs, sugar, fat, saturated fat, sodium, caffeine, potassium, calcium, iron, magnesium, zinc, vitamin D, vitamin C, vitamin B12, folate. Units: g for macros, kcal for energy, mg or µg as the app uses.",
+        items: { type: "object", properties: { nutrient: { type: "string" }, amount: { type: "number" } }, required: ["nutrient", "amount"] }, optional: true },
+      note: { type: "string", optional: true },
+      take_now: { type: "boolean", description: "Also mark it taken now", optional: true } },
+    run: function (args, ctx) {
+      var d = ctx.data, nm = String(args.name || "").trim().slice(0, 60); if (!nm) return { ok: false, message: "Give it a name." };
+      var r = (d.regimen || []).filter(function (x) { return x.name.toLowerCase() === nm.toLowerCase(); })[0];
+      var kind = args.kind === "medication" ? "med" : args.kind === "supplement" ? "supp" : (r ? r.kind : "supp");
+      var slots = [], bad = [], days = [], dn = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
+      (args.times || []).forEach(function (t) { var x = String(t).toLowerCase().trim(); if (/^(morning|noon|evening|bedtime)$/.test(x)) slots.push(x); else if (/^\d{1,2}:\d\d$/.test(x)) slots.push(("0" + x).slice(-5)); else if (x === "lunch") slots.push("noon"); else if (x === "night" || x === "supper" || x === "dinner") slots.push(x === "night" ? "bedtime" : "evening"); else bad.push(t); });
+      (args.days || []).forEach(function (t) { var i = dn.indexOf(String(t).toLowerCase().slice(0, 3)); if (i >= 0 && days.indexOf(i) < 0) days.push(i); });
+      if (!slots.length) slots = r ? r.slots.slice() : ["morning"];
+      var vals = r ? ikRegDoseVals(d, r) : {}, set = [], unknown = [];
+      (args.nutrients || []).forEach(function (x) { var k = ikNutrientKey(x && x.nutrient), v = Number(x && x.amount); if (k && IK_NBY[k] && isFinite(v) && v >= 0) { vals[k] = v; set.push(IK_NBY[k].label + " " + v + " " + IK_NBY[k].unit); } else unknown.push(x && x.nutrient); });
+      var keys = Object.keys(vals), linkId = r && /^c:/.test(r.ref || "") ? r.ref.slice(2) : null, food = null;
+      if (keys.length) { var per = {}; IK_N.forEach(function (n) { per[n.k] = vals[n.k] != null ? vals[n.k] : null; }); food = { id: linkId || ctx.ui.uid("c"), name: nm, kind: "supplement", perServing: per, servingG: null, src: "checklist", used: new Date().toISOString() }; }
+      var item = { id: r ? r.id : ctx.ui.uid("g"), kind: kind, name: nm, dose: args.dose != null ? String(args.dose).slice(0, 40) : (r ? r.dose : ""), ref: food ? "c:" + food.id : "", servings: 1,
+        slots: slots.filter(function (s, i) { return slots.indexOf(s) === i; }), days: days.length ? days.sort() : (r && !args.days ? r.days : []), note: args.note != null ? String(args.note).slice(0, 120) : (r ? r.note : "") };
+      ctx.update(function (dt) {
+        if (food) dt.customFoods = (dt.customFoods || []).filter(function (x) { return x.id !== food.id; }).concat([food]);
+        dt.regimen = (dt.regimen || []).filter(function (x) { return x.id !== item.id; }).concat([item]);
+      });
+      var msg = (r ? "Changed " : "Added ") + nm + " to the " + (kind === "med" ? "medications" : "vitamins & supplements") + " checklist, " + item.slots.map(function (s) { return ikSlot(s).label.toLowerCase(); }).join(" and ") + (item.days.length ? " on " + item.days.map(function (i) { return dn[i]; }).join(", ") : ", every day") + "." +
+        (set.length ? " Each dose adds " + set.join(", ") + "." : keys.length ? "" : " No nutrients set, so it's tracked only.") +
+        (unknown.length ? " Not added (not tracked by the app): " + unknown.join(", ") + "." : "") + (bad.length ? " Times not understood: " + bad.join(", ") + "." : "");
+      if (args.take_now) { var first = ikDoseList(dd.getData(), ikToday()).filter(function (x) { return x.r.id === item.id && !x.dose; })[0]; if (first) msg += " " + ikSetDose(item.id, first.slot, ikToday(), true, ctx.update); }
+      return { ok: true, message: msg };
+    } },
+  { name: "remove_checklist_item", description: "Take a medication or vitamin off the person's daily checklist. Days it was already taken stay in the log. The person is asked to confirm.",
+    params: { name: { type: "string" } },
+    confirm: function (args, ctx) { var r = (ctx.data.regimen || []).filter(function (x) { return x.name.toLowerCase().indexOf(String(args.name || "").toLowerCase()) >= 0; })[0]; return r ? "Take " + r.name + " off your checklist?" : null; },
+    yesLabel: "Yes, take it off",
+    run: function (args, ctx) {
+      var lw = String(args.name || "").toLowerCase(), r = (ctx.data.regimen || []).filter(function (x) { return x.name.toLowerCase().indexOf(lw) >= 0; })[0];
+      if (!r) return { ok: false, message: "Nothing on the checklist is called '" + args.name + "'." };
+      ctx.update(function (dt) { dt.regimen = dt.regimen.filter(function (x) { return x.id !== r.id; }); });
+      return { ok: true, message: "Took " + r.name + " off the checklist." };
+    } },
+  { name: "list_checklist", description: "List the person's daily checklist (medications and supplements): times, days, what each dose adds, and what's been taken today.",
+    params: { kind: { type: "string", enum: ["all", "medication", "supplement"], description: "Which ones (default all)", optional: true } },
+    run: function (args, ctx) {
+      var d = ctx.data, items = (d.regimen || []).filter(function (r) { return !args.kind || args.kind === "all" || (args.kind === "medication") === (r.kind === "med"); });
+      if (!items.length) return { ok: true, message: "The checklist is empty." };
+      var today = ikDoseList(d, ikToday());
+      return { ok: true, message: items.map(function (r) {
+        var v = ikRegDoseVals(d, r), adds = Object.keys(v).map(function (k) { return IK_NBY[k].label + " " + v[k] + " " + IK_NBY[k].unit; });
+        var t = today.filter(function (x) { return x.r.id === r.id; }).map(function (x) { return x.info.label.toLowerCase() + (x.dose ? " taken " + x.dose.at : " not yet"); });
+        return "- " + r.name + " (" + (r.kind === "med" ? "medication" : "supplement") + (r.dose ? ", " + r.dose : "") + "): " + r.slots.map(function (s) { return ikSlot(s).label.toLowerCase(); }).join(", ") +
+          (r.days && r.days.length ? " on " + r.days.map(function (i) { return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]; }).join(" ") : ", every day") + ". Adds: " + (adds.join(", ") || "nothing (tracked only)") + ". Today: " + (t.join(", ") || "not due");
+      }).join("\n") };
+    } },
+  { name: "set_cups", description: "Set the three cup sizes on the Hydration card (the buttons that add water).",
+    params: { cups: { type: "array", description: "Exactly three cups, smallest first", items: { type: "object", properties: { name: { type: "string" }, ml: { type: "number" } }, required: ["name", "ml"] } } },
+    run: function (args, ctx) {
+      var c = (args.cups || []).slice(0, 3); if (c.length !== 3) return { ok: false, message: "Give exactly three cups." };
+      var next = c.map(function (x, i) { var ml = Math.round(Number(x.ml) || 0); return { name: String(x.name || IK_CUPS_DEFAULT[i].name).slice(0, 24), ml: ml >= 25 && ml <= 3000 ? ml : IK_CUPS_DEFAULT[i].ml }; });
+      ctx.update(function (dt) { dt.settings = Object.assign({}, dt.settings, { cups: next }); });
+      return { ok: true, message: "Cups set: " + next.map(function (x) { return x.name + " " + x.ml + " mL"; }).join(", ") + "." };
     } },
   { name: "mark_dose", description: "Mark a medication or vitamin on the person's daily checklist as taken (or not taken) today.",
     params: { name: { type: "string", description: "The checklist item's name" }, time_of_day: { type: "string", description: "morning, noon, evening, bedtime or a set time like 21:00; leave empty for the next one not yet taken", optional: true },
