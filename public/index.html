@@ -128,6 +128,8 @@
   ＋ Add food is the main button, and "From a photo" is the first choice inside it.
   DigiBot's tip at the bottom is a soft tint of the Look colour instead of black.
   Add to today: the ways-to-add buttons wrap onto a second row instead of being cut off at the edge.
+  0.5.8z also: on PC the DigiBot button still covered the sync light (0.5.8y's 136px of room was narrower than the
+  button). The top bar now measures the button and keeps its width + 32px clear on the right.
   0.5.8z (Claude, Oran, 2026-10-17: "the setup isn't transferring to a Home Screen app on iPhone"): an iPhone Home Screen
   icon with "Open as Web App" on keeps its own storage, and a QR scanned with the Camera app always opens in Safari, so
   the setup landed in the wrong place. Now the app scans the code itself: menu → ⚙️ Settings → 📷 Scan a setup code
@@ -1403,17 +1405,35 @@ span.ik-efuel.ik-efuel{font-size:9.5px;font-weight:700;color:var(--dd-brand);bac
 /* top nav (computers) */
 .ik-topnav{display:none;align-items:center;gap:10px;margin:0 0 6px;flex-wrap:wrap}
 .ik-topnav .ik-seg{grid-template-columns:repeat(3,minmax(0,1fr));min-width:330px}
-@media (min-width:900px){
+/* 0.5.9 (Oran, 2026-10-17, "the iPad should be closer to the phone"): the top bar of view buttons is for computers
+   (a mouse that can hover). Tablets and other touch screens keep the phone's bottom bar with the camera and DigiBot,
+   however wide they are. The wide page layout below (two columns, bigger headings) still follows screen width. */
+@media (min-width:900px) and (hover:hover){
   .ik-tabbar{display:none}
   .ik-topnav{display:flex}
   .ik-topnav [data-dd-helper-toggle]{position:fixed;top:12px;right:16px;z-index:60;background:var(--dd-bg);box-shadow:0 2px 12px rgba(0,0,0,.14)}   /* 0.5.8r (Oran): ONLY the DigiBot button stays on screen while scrolling on PC */
-  .dd-top{padding-right:136px}   /* 0.5.8y (Oran): room for the fixed DigiBot button so it never covers the sync light */
+  .dd-top{padding-right:calc(var(--ik-bot-w,150px) + 32px)}   /* 0.5.8z (Oran, "still covering the sync button"): room = the DigiBot button's real width (measured, see ikBotRoom) + 16px edge + 16px gap; 0.5.8y's fixed 136px was narrower than the button */
+}
+@media (min-width:900px){
   .ik h1.ik-h1{font-size:40px}
   .ik .ik-head1 h1.ik-h1{font-size:28px}
   .ik .ik-head1 h1.ik-h1.sm{font-size:17px}
   .ik-todaygrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 16px;align-items:start}
 }
-@media (max-width:899px){ .dd-foot-body{padding-bottom:calc(76px + env(safe-area-inset-bottom))} }
+/* 0.5.9: on a wide tablet held upright, keep the five buttons grouped in the middle like on the phone, not spread edge to edge */
+@media (min-width:700px){ .ik-tabbar{padding-left:max(4px,calc(50% - 300px));padding-right:max(4px,calc(50% - 300px))} }
+@media (max-width:899px),(hover:none) and (pointer:coarse){ .dd-foot-body{padding-bottom:calc(76px + env(safe-area-inset-bottom))} }
+/* 0.5.9: a touch screen lying sideways (an iPad on the desk, a phone turned over) moves the bar to the left edge as a
+   rail, so the stats keep the full height. Same buttons, same order, camera in the middle. */
+@media (orientation:landscape) and (hover:none) and (pointer:coarse) and (min-width:700px){
+  .ik-tabbar{top:0;right:auto;bottom:var(--dd-hostbar-bottom,0px);width:calc(84px + env(safe-area-inset-left));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    border-top:0;border-right:1px solid #e5e5ea;padding:calc(10px + env(safe-area-inset-top)) 4px calc(10px + env(safe-area-inset-bottom)) calc(4px + env(safe-area-inset-left))}
+  .ik-tab{width:72px;min-height:56px;justify-content:center;border-radius:14px}
+  .ik-tab[aria-current="page"],.ik-tab.on{background:rgba(255,45,85,.08)}
+  .ik-cam{margin:8px 0;justify-self:auto;flex:none}
+  body{padding-left:calc(84px + env(safe-area-inset-left))}
+  .dd-foot-body{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+}
 @media (max-width:420px){ .ik-rings svg{width:132px;height:132px} .ik-ringlegend .ik-v{font-size:19px} .ik h1.ik-h1{font-size:30px} .ik .ik-head1 h1.ik-h1{font-size:24px} .ik .ik-head1 h1.ik-h1.sm{font-size:15px} .ik-rings{gap:12px} }
 
 /* sheets the app opens */
@@ -2548,7 +2568,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     var h = window.innerHeight, best = 0;
     document.querySelectorAll("[data-dd-appbar]").forEach(function (el) {
       var r = el.getBoundingClientRect();
-      if (r.height > 0 && r.width > 0 && getComputedStyle(el).display !== "none" && r.bottom >= h - 2) best = Math.max(best, Math.round(h - r.top));
+      if (r.height > 0 && r.width >= window.innerWidth * 0.5 && getComputedStyle(el).display !== "none" && r.bottom >= h - 2)   /* 0.5.9: a side rail (tablet sideways) is not a bottom bar */ best = Math.max(best, Math.round(h - r.top));
     });
     return best;
   }
@@ -8495,6 +8515,14 @@ function ikEntriesOn(d, day) { return (ikByDay(d)[day] || []).slice(); }
    history stay as quick as a week. Anything that changes the numbers (your foods, recipes, how you cook)
    starts the totals over. */
 var IK_DC = { key: null, days: {}, kcal: {} };
+/* 0.5.8z (Oran): the fixed DigiBot button on PC sits over the right end of the top bar. Measure its real width (it
+   changes with the helper's name and the font) so the top bar's right padding keeps the sync light and Look button clear. */
+function ikBotRoom() {
+  var b = document.querySelector(".ik-topnav [data-dd-helper-toggle]");
+  if (b && b.offsetWidth) document.documentElement.style.setProperty("--ik-bot-w", b.offsetWidth + "px");
+}
+window.addEventListener("resize", function () { clearTimeout(ikBotRoom.t); ikBotRoom.t = setTimeout(ikBotRoom, 150); });
+window.addEventListener("load", function () { ikBotRoom(); setTimeout(ikBotRoom, 1500); if (document.fonts && document.fonts.ready) document.fonts.ready.then(ikBotRoom); });
 var IK_REV = 0, IK_FOODKEY = null;   // 0.5.8x perf: IK_REV goes up on every change to the data (dd "change")
 function ikDCReset(d) {
   var k = ikMemo("foodkey", function () {
