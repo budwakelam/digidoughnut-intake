@@ -216,6 +216,7 @@ body{margin:0;font-family:var(--dd-font);background:var(--dd-bg);color:var(--dd-
 
 /* layout + cards */
 .dd-wrap{max-width:760px;margin:0 auto;padding:20px 16px}
+@media (max-width:899px){.dd-wrap{padding-top:8px}}   /* 0.5.9_3 (Bud, Oran, 2026-10-17): smaller gap above "Now" on mobile — matches the heading's 8px bottom margin */
 .dd-card{background:var(--dd-card);border-radius:var(--dd-radius);padding:18px;margin:0 0 14px;box-shadow:var(--dd-shadow)}
 .dd-card h2{font-size:1.02rem;margin:0 0 10px;display:flex;align-items:center;gap:8px}
 .dd-note{font-size:.85rem;color:var(--dd-muted)}
