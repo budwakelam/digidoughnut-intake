@@ -12,7 +12,7 @@
        dd.ui: the app's own bottom bar (data-dd-appbar) is cleared by toasts and the helper.
   0.2.0 (V2 handoff, Oran's iPhone test 2026-10-13), each also marked "PLATFORM CHANGE (2026-10-13 …)":
     4. dd.setup: Firebase guide says Product categories → Security → Authentication; the npm / script tag
-       choice is explained inside the Add Firebase SDK step; the sync wizard's Send to my phone opens the
+       choice is explained inside the Add Firebase SDK step; the sync wizard's Send to mobile device opens the
        same screen as Settings, and an iPhone note on that screen (open in Safari, then Home Screen).
     5. dd.agent: copying the agent instructions saves straight away; other devices tick step 5 too.
     6. dd.ai: tier "fast" (Flash-Lite first, plain chat) and "full" (Flash first, photos).
@@ -135,9 +135,9 @@
   the setup landed in the wrong place. Now the app scans the code itself: menu → ⚙️ Settings → 📷 Scan a setup code
   (also offered on first open of an unset Home Screen icon, and in the welcome sheet on phones). The camera reads the
   square from any set-up device (BarcodeDetector where there is one, the vendored jsQR 1.4.0 otherwise — Safari has
-  none). Fallback with no camera: "📋 Copy setup code" in Send to my phone, then "Paste a code instead" on the phone
+  none). Fallback with no camera: "📋 Copy setup code" in Send to mobile device, then "Paste a code instead" on the phone
   (Universal Clipboard carries it from a Mac or another iPhone). Same 10-minute, one-time code as the QR, so pasting
-  is exactly as safe as scanning. Send to my phone now also shows on phones (phone → iPad / another phone).
+  is exactly as safe as scanning. Send to mobile device now also shows on phones (phone → iPad / another phone).
   Look: the "Hide the banner / Hide the app picture in the top bar" checkbox is gone (no longer applies); an old
   saved "hidden" setting is ignored, so nobody gets stuck without it. Each change marked "PLATFORM CHANGE (2026-10-17 scan)".
   0.5.8y (Bud, Oran, 2026-10-17): on PC the fixed DigiBot button was covering the sync light — the top bar
@@ -1405,14 +1405,21 @@ span.ik-efuel.ik-efuel{font-size:9.5px;font-weight:700;color:var(--dd-brand);bac
 /* top nav (computers) */
 .ik-topnav{display:none;align-items:center;gap:10px;margin:0 0 6px;flex-wrap:wrap}
 .ik-topnav .ik-seg{grid-template-columns:repeat(3,minmax(0,1fr));min-width:330px}
+/* 0.5.9_2 (Bud, Oran, 2026-10-17): "Send to my phone" is now "Send to mobile device" — the feature moves the
+   setup to any phone or tablet with a QR scanner, not just a phone. */
 /* 0.5.9 (Oran, 2026-10-17, "the iPad should be closer to the phone"): the top bar of view buttons is for computers
    (a mouse that can hover). Tablets and other touch screens keep the phone's bottom bar with the camera and DigiBot,
    however wide they are. The wide page layout below (two columns, bigger headings) still follows screen width. */
 @media (min-width:900px) and (hover:hover){
   .ik-tabbar{display:none}
   .ik-topnav{display:flex}
-  .ik-topnav [data-dd-helper-toggle]{position:fixed;top:12px;right:16px;z-index:60;background:var(--dd-bg);box-shadow:0 2px 12px rgba(0,0,0,.14)}   /* 0.5.8r (Oran): ONLY the DigiBot button stays on screen while scrolling on PC */
-  .dd-top{padding-right:calc(var(--ik-bot-w,150px) + 32px)}   /* 0.5.8z (Oran, "still covering the sync button"): room = the DigiBot button's real width (measured, see ikBotRoom) + 16px edge + 16px gap; 0.5.8y's fixed 136px was narrower than the button */
+  /* 0.5.9 (Oran, 2026-10-17, "the name could get longer, maybe on the desktop he needs to be at the bottom"): DigiBot moves from the
+     top-right of the header to a floating button in the bottom-right corner. The header no longer has to make room for it, and a
+     long name (up to 24 letters) just makes the button wider, up to a limit, then ends in "…". Replaces 0.5.8r/0.5.8y/0.5.8z. */
+  .ik-topnav [data-dd-helper-toggle]{position:fixed;top:auto;right:20px;bottom:calc(20px + var(--dd-host-bottom,0px));z-index:60;background:var(--dd-bg);
+    box-shadow:0 6px 20px rgba(0,0,0,.18);border-radius:99px;max-width:min(300px,calc(100vw - 40px));padding:10px 18px 10px 12px;min-height:48px}
+  .ik-topnav [data-dd-helper-toggle] [data-helper-name]{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .dd-foot-body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}   /* the end of the page scrolls clear of the button */
 }
 @media (min-width:900px){
   .ik h1.ik-h1{font-size:40px}
@@ -1420,6 +1427,9 @@ span.ik-efuel.ik-efuel{font-size:9.5px;font-weight:700;color:var(--dd-brand);bac
   .ik .ik-head1 h1.ik-h1.sm{font-size:17px}
   .ik-todaygrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 16px;align-items:start}
 }
+/* 0.5.9: DigiBot can be renamed (up to 24 letters). In the bottom bar the name stays on one line and ends in "…";
+   in the side rail it may use two lines. */
+.ik-tab [data-helper-name]{display:block;max-width:100%;padding:0 2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* 0.5.9: on a wide tablet held upright, keep the five buttons grouped in the middle like on the phone, not spread edge to edge */
 @media (min-width:700px){ .ik-tabbar{padding-left:max(4px,calc(50% - 300px));padding-right:max(4px,calc(50% - 300px))} }
 @media (max-width:899px),(hover:none) and (pointer:coarse){ .dd-foot-body{padding-bottom:calc(76px + env(safe-area-inset-bottom))} }
@@ -1431,6 +1441,7 @@ span.ik-efuel.ik-efuel{font-size:9.5px;font-weight:700;color:var(--dd-brand);bac
   .ik-tab{width:72px;min-height:56px;justify-content:center;border-radius:14px}
   .ik-tab[aria-current="page"],.ik-tab.on{background:rgba(255,45,85,.08)}
   .ik-cam{margin:8px 0;justify-self:auto;flex:none}
+  .ik-tab [data-helper-name]{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;line-height:1.2;text-align:center;overflow-wrap:anywhere}
   body{padding-left:calc(84px + env(safe-area-inset-left))}
   .dd-foot-body{padding-bottom:calc(10px + env(safe-area-inset-bottom))}
 }
@@ -2267,7 +2278,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     sync_rules:    ["Your Firebase database said no.", "Open the sync setup again and redo the step where you paste the rules, then tap Publish."],
     sync_offline:  ["Can't reach your Firebase database right now.", "Check your internet. Your changes are kept on this device and go across when it's back."],
     sync_newer:    ["Your other device has a newer version of this program.", "Put the newer file on this device too, then open it from the same address."],
-    sync_moved:    ["This device's live sync address was retired on your other device.", "Open the program on that device and use Send to my phone again to sync it."],
+    sync_moved:    ["This device's live sync address was retired on your other device.", "Open the program on that device and use Send to mobile device again to sync it."],
     sync_file:     ["Live sync needs the program to be online.", "Put it online first (setup step 3, Where it lives), then open it from its web address and turn on sync there."],
     backup_bad:    ["That file didn't look like a backup from this program.", "Choose a file that ends in .json and was made with the Download a backup button."]
   };
@@ -2621,7 +2632,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
    It opens the program's own items first, then ⚙️ Settings › (the platform's items), then Help and
    About. Each module adds its own:
      dd.menu.add({id, icon, label, order, show(), run(), note()})
-       order   10 Setup & connections · 20 Where it lives · 30 Send to my phone ·
+       order   10 Setup & connections · 20 Where it lives · 30 Send to mobile device ·
                40 Backup & new versions · 50 Privacy · 60 Help & support details · 70 About
        show()  optional; return false to leave the item out right now
        note()  optional; a short second line under the label (plain text)
@@ -2665,7 +2676,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   /* Groups (Oran, 2026-10-08): the menu is the APP's menu first. The platform's own items are
      settings, kept one level down so each program can put its own things at the top.
        app       the program's own items (DD_PROGRAM.menu, or dd.menu.add({group:"app"}))
-       settings  ⚙️ Settings › Setup & connections, Where it lives, Send to my phone, Backup, Privacy
+       settings  ⚙️ Settings › Setup & connections, Where it lives, Send to mobile device, Backup, Privacy
        end       Help & support details, About (always at the bottom) */
   function groupOf(it) { return it.group || "settings"; }
   function rowHtml(it) {
@@ -3028,18 +3039,18 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     return { svg: qr.createSvgTag({ cellSize: cell, margin: cell * 4 }), modules: n };
   };
 
-  /* ---------- the "Send to my phone" sheet ---------- */
+  /* ---------- the "Send to mobile device" sheet ---------- */
   var timer = null;
   pair.open = function () {
     if (dd.env.isFile) {
-      var s1 = dd.ui.sheet(dd.menu.headHtml({ title: "Send to my phone", icon: "📲" }) +
+      var s1 = dd.ui.sheet(dd.menu.headHtml({ title: "Send to mobile device", icon: "📲" }) +
         '<p>Your phone can\'t open a file that lives on this computer. Put the program online first (setup step 3, Where it lives), then open it from its web address and tap this again.</p>' +
         '<div class="dd-btnrow"><button class="dd-btn" data-close>OK</button></div>');
       s1.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
       return;
     }
     var hasCode = dd.ai && dd.ai.hasCode();
-    var sh = dd.ui.sheet(dd.menu.headHtml({ title: "Send to my phone", icon: "📲" }) +
+    var sh = dd.ui.sheet(dd.menu.headHtml({ title: "Send to mobile device", icon: "📲" }) +
       '<p class="dd-note" style="margin-top:0">Open your phone\'s camera and point it at this square. Tap the link that appears.</p>' +
       /* PLATFORM CHANGE (2026-10-13): on iPhone, a Home Screen icon keeps its own saved things, apart from Safari.
          So the order matters: scan, let it open in Safari, then add it to the Home Screen from there. */
@@ -3241,7 +3252,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     if (!canCam) {
       var s0 = dd.ui.sheet(head +
         '<p>' + (dd.env.isFile ? "The camera only works once the app is opened from its web address, not from a file." : "This browser won't let the app use the camera here.") +
-        ' You can paste the code instead: on your other device, open <b>Send to my phone</b> and tap <b>📋 Copy setup code</b>.</p>' +
+        ' You can paste the code instead: on your other device, open <b>Send to mobile device</b> and tap <b>📋 Copy setup code</b>.</p>' +
         '<div class="dd-btnrow"><button class="dd-btn ghost" data-close>Cancel</button><button class="dd-btn" data-paste>Paste a code</button></div>');
       s0.querySelector("[data-close]").addEventListener("click", dd.ui.closeSheet);
       s0.querySelector("[data-paste]").addEventListener("click", pair.paste);
@@ -3249,7 +3260,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     }
     var stream = null, video = null, stopped = false, loop = null, detector = null, canvas = document.createElement("canvas"), ctx = null, warned = 0;
     var sh = dd.ui.sheet(head +
-      '<p class="dd-note" style="margin-top:0">On your other device, open the menu → Settings → <b>📲 Send to my phone</b>. Point this camera at the square.</p>' +
+      '<p class="dd-note" style="margin-top:0">On your other device, open the menu → Settings → <b>📲 Send to mobile device</b>. Point this camera at the square.</p>' +
       '<div class="dd-scan-wrap"><video playsinline muted autoplay></video><div class="dd-scan-frame"></div></div>' +
       '<p class="dd-scan-msg" data-msg>Starting the camera…</p>' +
       '<p class="dd-note">The picture stays on this device: it is only read for the code, never saved or sent.</p>' +
@@ -3268,7 +3279,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     function found(text) {
       if (stopped) return true;
       if (!isSetupCode(text)) {
-        if (Date.now() - warned > 2500) { warned = Date.now(); msg("That's a different QR code. Look for the square in Send to my phone."); }
+        if (Date.now() - warned > 2500) { warned = Date.now(); msg("That's a different QR code. Look for the square in Send to mobile device."); }
         return false;
       }
       stop();
@@ -3328,7 +3339,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   pair.paste = function () {
     var canRead = !!(navigator.clipboard && navigator.clipboard.readText && window.isSecureContext);
     var sh = dd.ui.sheet(dd.menu.headHtml({ title: "Paste a setup code", icon: "📋", sub: "From a device that's already set up" }) +
-      '<p class="dd-note" style="margin-top:0">On your other device, open the menu → Settings → <b>📲 Send to my phone</b> and tap <b>📋 Copy setup code</b>. ' +
+      '<p class="dd-note" style="margin-top:0">On your other device, open the menu → Settings → <b>📲 Send to mobile device</b> and tap <b>📋 Copy setup code</b>. ' +
       'A Mac, iPhone or iPad signed in to the same Apple Account hands the copy straight to this one; otherwise send it to yourself in a message or note and copy it from there.</p>' +
       '<textarea class="dd-paste-box" rows="4" placeholder="Paste the code (or the whole link) here" autocapitalize="off" autocomplete="off" spellcheck="false"></textarea>' +
       '<p class="dd-scan-msg" data-msg></p>' +
@@ -3353,7 +3364,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     });
   };
 
-  if (dd.menu) dd.menu.add({ id: "phone", icon: "📲", label: "Send to my phone", order: 30,
+  if (dd.menu) dd.menu.add({ id: "phone", icon: "📲", label: "Send to mobile device", order: 30,
     show: function () { return true; },   // PLATFORM CHANGE (2026-10-17 scan): phones too (phone → iPad or another phone)
     note: function () { return dd.env.isFile ? "Needs it online first (Where it lives)" : "Show a square for your other device to scan"; },
     run: function () { pair.open(); } });
@@ -4544,7 +4555,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     { keys: ["update", "new version", "upgrade"], for: /^host_tiiny/, a: "To put a new version online, log in to tiiny.host and use Update on the same project. That keeps the same address, so your numbers stay." },
     { keys: ["trial", "free trial", "solo"], for: /^host_tiiny/, a: "You don't need tiiny.host's free trial: tap Skip. The trial turns into a paid plan, and the free plan is all this program needs." },
     { keys: ["home screen", "icon", "app", "bookmark", "shortcut"], a: "Bookmark it on your computer and add it to your Home Screen on your phone. Then it opens like an app, always from the same address, so your numbers are always there. On an iPhone, leave Open as Web App switched off." },
-    { keys: ["phone", "iphone", "android", "mobile"], a: "Setting up the helper is easiest on a computer. Once it works, Send to my phone moves it over by scanning a code." }
+    { keys: ["phone", "iphone", "android", "mobile"], a: "Setting up the helper is easiest on a computer. Once it works, Send to mobile device moves it over by scanning a code." }
   ];
   setup.suggestQuestions = function (wizardId) {
     if (wizardId === "host_other") return ["How do I upload it to Netlify?", "Can I use WordPress?", "What does https mean?"];
@@ -4675,7 +4686,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       { title: "You're connected!",
         pic: { kind: "done" },
         body: '<p>The helper is ready. Your code stays in this browser, on this device.</p>' +
-              '<p class="dd-note">To use the helper on your phone too, use <b>Send to my phone</b>: it brings your code across with one scan.</p>',
+              '<p class="dd-note">To use the helper on your phone too, use <b>Send to mobile device</b>: it brings your code across with one scan.</p>',
         nextLabel: "Done" }
     ]
   };
@@ -4768,7 +4779,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
               '<li><b>Getting an update?</b> On tiiny.host, use <b>' + esc(L("host_update", "Update")) + '</b> on this same project. Don\'t upload it as a new one.</li>'
             : '<li><b>Getting an update?</b> Upload the new file to the same place with the <b>same file name</b>, replacing the old one, so the address stays the same.</li>') +
           '</ul>' +
-          '<p>Last step: in the new tab, tap the program\'s name at the top left (the menu), then <b>⚙️ Settings</b> → <b>📲 Send to my phone</b>. On your phone, add it to your Home Screen when it asks.</p>' +
+          '<p>Last step: in the new tab, tap the program\'s name at the top left (the menu), then <b>⚙️ Settings</b> → <b>📲 Send to mobile device</b>. On your phone, add it to your Home Screen when it asks.</p>' +
           (svc === "tiiny" ? '<p class="dd-note">You can ignore the small tiiny.host banner on your page.</p>' : ""); },
         nextLabel: "Done" }
     ];
@@ -5104,13 +5115,13 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       { title: "Live sync is on!",
         pic: { kind: "done" },
         /* PLATFORM CHANGE (2026-10-13, Oran's test): this button now closes setup completely and opens
-           the very same Send to my phone screen as menu → Settings, after setup has finished saving.
+           the very same Send to mobile device screen as menu → Settings, after setup has finished saving.
            On a phone there's no button: the square has to be shown on the computer. */
         body: function () { return '<p>This device is connected to your database.' + (dd.env.isPhone
-            ? ' To bring in your other devices, open ' + esc(program.name) + ' on your computer, then menu → ⚙️ Settings → <b>Send to my phone</b>.</p>'
-            : ' Now bring your phone in: tap <b>Send to my phone</b> and scan the square. The phone joins straight away and stays synced.</p>') +
+            ? ' To bring in your other devices, open ' + esc(program.name) + ' on your computer, then menu → ⚙️ Settings → <b>Send to mobile device</b>.</p>'
+            : ' Now bring your phone in: tap <b>Send to mobile device</b> and scan the square. The phone joins straight away and stays synced.</p>') +
           '<p class="dd-note">The chip at the top of the page shows a green dot and "Online" while everything is up to date.</p>'; },
-        action: dd.env.isPhone ? null : { label: "📲 Send to my phone", run: function (c) {
+        action: dd.env.isPhone ? null : { label: "📲 Send to mobile device", run: function (c) {
           c.next();
           setTimeout(function () {
             var item = dd.menu && dd.menu.items().filter(function (it) { return it.id === "phone"; })[0];
@@ -5188,7 +5199,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     if (hasCode && synced) { dd.ui.clearNotice("webapp"); return; }
     var st = state(); if (st.webAppOk) return;
     dd.ui.notice("webapp", "This Home Screen icon keeps its own storage, so " + (hasCode ? "live sync isn't" : "your access code and sync aren't") +
-      " here yet. Already set up on another device? Open Send to my phone there, then scan its square from here.", "info", [
+      " here yet. Already set up on another device? Open Send to mobile device there, then scan its square from here.", "info", [
       { label: "📷 Scan a code", primary: true, onClick: function () { dd.ui.clearNotice("webapp"); dd.pair.scan(); } },
       { label: "Paste a code", onClick: function () { dd.ui.clearNotice("webapp"); dd.pair.paste(); } },
       { label: "Not now", onClick: function () { var s2 = state(); s2.webAppOk = Date.now(); saveState(s2); dd.ui.clearNotice("webapp"); } }
@@ -5610,7 +5621,10 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   helper.paintNames = function () {
     if (!document || !document.querySelectorAll) return;
     var n = helper.name(), els = document.querySelectorAll("[data-helper-name]");
-    for (var i = 0; i < els.length; i++) els[i].textContent = n;
+    for (var i = 0; i < els.length; i++) {
+      els[i].textContent = n;
+      var btn = els[i].closest && els[i].closest("button"); if (btn) btn.title = n;   /* 0.5.9: a long name may end in "…" on the button; the full name shows on hover */
+    }
   };
   helper.enabled = function () { return !!cfg; };
 
@@ -6145,7 +6159,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
      name. The buyer can pick two colours (main + second) from presets or any colour.
    - The DigiDoughnut logo sits in the footer (embedded at build time as DD_LOGO, no outside image).
    - The look is saved INSIDE the program's data as data.brand, so it syncs to the buyer's other
-     devices, travels with Send to my phone and goes into backups. Programs never see it: their
+     devices, travels with Send to mobile device and goes into backups. Programs never see it: their
      validateData ignores keys they don't know, and dd.migrateData carries it through upgrades.
      Changing the look never ends "example mode" (it uses replaceData with the same example flag).
    - Every value is checked before use: colours are #rrggbb, pictures are https links only. A
@@ -6378,7 +6392,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     return window.DD_LOGO ? '<img class="dd-foot-logo" src="' + window.DD_LOGO + '" alt="DigiDoughnut" width="180" height="60">' : "<b>DigiDoughnut</b>";
   };
 
-  /* The look travels with Send to my phone even while the numbers are still examples. */
+  /* The look travels with Send to mobile device even while the numbers are still examples. */
   if (dd.pair) dd.pair.register({ key: "b", label: "look", hidden: true,
     give: function () { var b = brand.get(); return Object.keys(b).length ? b : undefined; },
     take: function (v) { var b = brand.clean(v); if (!Object.keys(b).length) return false; brand.set(b); return true; } });
@@ -6872,7 +6886,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
     paint(); dd.emit("sync:changed", { on: false, moved: true });
     var thing = (program && program.dataLabel) || "numbers";
     dd.ui.notice("sync", "Live sync stopped on this device: your " + thing + " moved to a new private address, because an AI agent was disconnected on your other device. " +
-      "Everything here is kept. To sync again, open the program on that device and use Send to my phone again.", "warn");
+      "Everything here is kept. To sync again, open the program on that device and use Send to mobile device again.", "warn");
   }
 
   /* For other platform modules (dd.agent): the live connection, or null when sync isn't on. */
@@ -7450,7 +7464,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       '<p class="dd-note">Got a newer version of the file? Put it in the same place with the same file name, and your ' + esc(t) + ' stays.</p>' +
       '<p class="dd-note">Each place keeps its own ' + esc(t) + ' in this browser. Clearing the browser\'s "cookies and site data" removes it from this device, so keep a backup (menu → ⚙️ Settings → 💾 Backup &amp; new versions).</p>' +
       '<div class="dd-btnrow">' +
-        (here.kind !== "file" && !dd.env.isPhone && dd.pair ? '<button class="dd-btn ghost" data-phone>📲 Send to my phone</button>' : "") +
+        (here.kind !== "file" && !dd.env.isPhone && dd.pair ? '<button class="dd-btn ghost" data-phone>📲 Send to mobile device</button>' : "") +
         (here.kind !== "file" && dd.env.isPhone && !dd.env.isStandalone && dd.setup && dd.setup.showHomeScreen ? '<button class="dd-btn ghost" data-homescreen>Add to Home Screen</button>' : "") +
         '<button class="dd-btn ghost" data-close>Close</button></div>', { sticky: true });
     sh.classList.add("dd-sheet-wide");
@@ -7978,7 +7992,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
       '<p>Your own AI agent, like Muse, can read your ' + esc(L) + ' and make changes for you. It goes through your own Firebase database: DigiDoughnut never sees any of it.</p>' +
       '<ol class="dd-home-steps"><li>Tap <b>Copy instructions for my agent</b>.</li><li>Paste them into a chat with your agent, then ask for what you want, for example <i>"Add bread to my list."</i></li></ol>' +
       '<p class="dd-status show warn"><b>Keep the instructions private.</b> Anyone who has them can read and change your ' + esc(L) + '. ' +
-        'To cut your agent off at any time, tap <b>Disconnect my agent</b>: your ' + esc(L) + ' moves to a new private address, and your other devices need one more scan with Send to my phone.</p>' +
+        'To cut your agent off at any time, tap <b>Disconnect my agent</b>: your ' + esc(L) + ' moves to a new private address, and your other devices need one more scan with Send to mobile device.</p>' +
       '<p class="dd-note">Changes your agent asks for happen the next time ' + esc(program.name) + ' is open on any of your devices, or straight away if your agent opens its link. ' +
         'Big changes, like clearing everything, wait until you tap Yes on your own device. Whatever your agent reads also goes to the company that runs it (for Muse, that\'s Meta).</p>' +
       '<div class="dd-btnrow"><button class="dd-btn" data-copy>📋 Copy instructions for my agent</button>' +
@@ -8017,7 +8031,7 @@ var qrcode=function(){function i(t,r){function a(t,r){g=function(t){for(var r=ne
   agent.disconnect = function () {
     var L = label();
     return dd.ui.confirm("Disconnect your AI agent?",
-      "Your " + L + " moves to a new private address that your agent doesn't know. Everything here is kept. Your other devices stop syncing until you scan Send to my phone on them once more.",
+      "Your " + L + " moves to a new private address that your agent doesn't know. Everything here is kept. Your other devices stop syncing until you scan Send to mobile device on them once more.",
       "Yes, disconnect", "No, keep it connected", true).then(function (yes) {
       if (!yes) return false;
       return dd.sync.newAddress().then(function (r) {
@@ -13352,7 +13366,7 @@ const DD_PROGRAM = {
   id: "intake",          // working name: may change until the first sale, never after (it names the saved data)
   name: "Intake",
   
-  version: "0.5.8",
+  version: "0.5.9",
   barTagline: false,
   iconImg: "data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20120%20120%22%3E%3Cstyle%3E*%7Banimation-timing-function:linear;animation-iteration-count:infinite%7D.p,.s,.d%7Bopacity:0%7D.d%7Banimation:dr%201.5s%20infinite%7D.d2%7Banimation-delay:-.75s%7D%40keyframes%20dr%7B0%25%7Btransform:translate(56px,4px);opacity:0%7D50%25%7Bopacity:1%7D100%25%7Btransform:translate(56px,36px);opacity:0%7D%7D.r%7Btransform-box:fill-box;transform-origin:center;animation:rp%202.4s%20infinite%7D%40keyframes%20rp%7B0%25%7Btransform:scale(1);opacity:.8%7D100%25%7Btransform:scale(1.4);opacity:0%7D%7D.gl%7Banimation:gl%202s%20ease-in-out%20infinite%20alternate%7D%40keyframes%20gl%7B0%25%7Bopacity:.35%7D100%25%7Bopacity:1%7D%7D.s0%7Banimation-name:sa%7D.s1%7Banimation-name:sb%7D%40keyframes%20sa%7B0%25,16%25%7Bopacity:0%7D17.5%25%7Bopacity:1%7D22%25%7Bopacity:.6%7D32%25,100%25%7Bopacity:0%7D%7D%40keyframes%20sb%7B0%25,30%25%7Bopacity:0%7D31.5%25%7Bopacity:1%7D36%25%7Bopacity:.6%7D46%25,100%25%7Bopacity:0%7D%7D%40keyframes%20m1%7B0%25%7Btransform:translate(80px,58px);opacity:0%7D5%25%7Btransform:translate(85.2px,56.8px);opacity:1%7D10%25%7Btransform:translate(90.3px,55.3px);opacity:1%7D15%25%7Btransform:translate(95.2px,53.1px);opacity:1%7D20%25%7Btransform:translate(99.4px,49.8px);opacity:1%7D25%25%7Btransform:translate(103px,45.9px);opacity:1%7D30%25%7Btransform:translate(107.5px,43.1px);opacity:1%7D35%25%7Btransform:translate(112.7px,41.8px);opacity:0.6%7D40%25%7Btransform:translate(118px,42px);opacity:0.2%7D42%25,100%25%7Btransform:translate(118px,42px);opacity:0%7D%7D.p1%7Banimation:m1%204.1s%20linear%20-0.3s%20infinite%7D%40keyframes%20m2%7B0%25%7Btransform:translate(74px,82px);opacity:0%7D5%25%7Btransform:translate(78px,85.7px);opacity:1%7D10%25%7Btransform:translate(82.1px,89.1px);opacity:1%7D15%25%7Btransform:translate(86.4px,92.3px);opacity:1%7D20%25%7Btransform:translate(90.8px,95.4px);opacity:1%7D25%25%7Btransform:translate(95.2px,98.4px);opacity:1%7D30%25%7Btransform:translate(99.6px,101.5px);opacity:1%7D35%25%7Btransform:translate(103.9px,104.7px);opacity:0.6%7D40%25%7Btransform:translate(108px,108px);opacity:0.2%7D42%25,100%25%7Btransform:translate(108px,108px);opacity:0%7D%7D.p2%7Banimation:m2%205.3s%20linear%20-1.9s%20infinite%7D%40keyframes%20m3%7B0%25%7Btransform:translate(36px,84px);opacity:0%7D5%25%7Btransform:translate(32.3px,88.1px);opacity:1%7D10%25%7Btransform:translate(28.9px,92.4px);opacity:1%7D15%25%7Btransform:translate(26.1px,97.1px);opacity:1%7D20%25%7Btransform:translate(24px,102.1px);opacity:1%7D25%25%7Btransform:translate(21.1px,106.8px);opacity:1%7D30%25%7Btransform:translate(16.7px,109.9px);opacity:1%7D35%25%7Btransform:translate(11.5px,111.5px);opacity:0.6%7D40%25%7Btransform:translate(6px,112px);opacity:0.2%7D42%25,100%25%7Btransform:translate(6px,112px);opacity:0%7D%7D.p3%7Banimation:m3%204.7s%20linear%20-3.2s%20infinite%7D%40keyframes%20m4%7B0%25%7Btransform:translate(44px,62px);opacity:0%7D5%25%7Btransform:translate(38.4px,61.1px);opacity:1%7D10%25%7Btransform:translate(32.7px,60.8px);opacity:1%7D15%25%7Btransform:translate(27.1px,60.1px);opacity:1%7D20%25%7Btransform:translate(21.9px,57.9px);opacity:1%7D25%25%7Btransform:translate(17.8px,54px);opacity:1%7D30%25%7Btransform:translate(14.3px,49.5px);opacity:1%7D35%25%7Btransform:translate(10.6px,45.2px);opacity:0.6%7D40%25%7Btransform:translate(6px,42px);opacity:0.2%7D42%25,100%25%7Btransform:translate(6px,42px);opacity:0%7D%7D.p4%7Banimation:m4%205.9s%20linear%20-0.9s%20infinite%7D%40keyframes%20m5%7B0%25%7Btransform:translate(70px,40px);opacity:0%7D5%25%7Btransform:translate(72.6px,35.9px);opacity:1%7D10%25%7Btransform:translate(75.3px,31.8px);opacity:1%7D15%25%7Btransform:translate(78.1px,27.8px);opacity:1%7D20%25%7Btransform:translate(80.9px,23.9px);opacity:1%7D25%25%7Btransform:translate(83.7px,20px);opacity:1%7D30%25%7Btransform:translate(86.5px,16px);opacity:1%7D35%25%7Btransform:translate(89.3px,12px);opacity:0.6%7D40%25%7Btransform:translate(92px,8px);opacity:0.2%7D42%25,100%25%7Btransform:translate(92px,8px);opacity:0%7D%7D.p5%7Banimation:m5%204.4s%20linear%20-2.6s%20infinite%7D%40keyframes%20m6%7B0%25%7Btransform:translate(50px,44px);opacity:0%7D5%25%7Btransform:translate(45.5px,39.9px);opacity:1%7D10%25%7Btransform:translate(40.4px,36.6px);opacity:1%7D15%25%7Btransform:translate(34.7px,34.5px);opacity:1%7D20%25%7Btransform:translate(28.6px,33.9px);opacity:1%7D25%25%7Btransform:translate(22.9px,32.2px);opacity:1%7D30%25%7Btransform:translate(18.1px,28.4px);opacity:1%7D35%25%7Btransform:translate(14.6px,23.4px);opacity:0.6%7D40%25%7Btransform:translate(12px,18px);opacity:0.2%7D42%25,100%25%7Btransform:translate(12px,18px);opacity:0%7D%7D.p6%7Banimation:m6%205.6s%20linear%20-4.4s%20infinite%7D%40media%20(prefers-reduced-motion:reduce)%7B*%7Banimation:none!important%7D.r%7Bopacity:0%7D%7D%3C/style%3E%3Cdefs%3E%3CradialGradient%20id=%22f%22%20cx=%22.6%22%20cy=%22.55%22%20r=%22.6%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff6d6%22/%3E%3Cstop%20offset=%22.5%22%20stop-color=%22%23ffb36b%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23ff4f7a%22/%3E%3C/radialGradient%3E%3CradialGradient%20id=%22w%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%22.4%22%20stop-color=%22%23fff%22%20stop-opacity=%22.8%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23fff%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3CradialGradient%20id=%22g1%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%22.28%22%20stop-color=%22%23fff%22%20stop-opacity=%22.95%22/%3E%3Cstop%20offset=%22.55%22%20stop-color=%22%23ff453a%22%20stop-opacity=%22.75%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23ff453a%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3CradialGradient%20id=%22g2%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%22.28%22%20stop-color=%22%23fff%22%20stop-opacity=%22.95%22/%3E%3Cstop%20offset=%22.55%22%20stop-color=%22%23ff9f0a%22%20stop-opacity=%22.75%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23ff9f0a%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3CradialGradient%20id=%22g3%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%22.28%22%20stop-color=%22%23fff%22%20stop-opacity=%22.95%22/%3E%3Cstop%20offset=%22.55%22%20stop-color=%22%2330d158%22%20stop-opacity=%22.75%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%2330d158%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3CradialGradient%20id=%22g4%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%22.28%22%20stop-color=%22%23fff%22%20stop-opacity=%22.95%22/%3E%3Cstop%20offset=%22.55%22%20stop-color=%22%230a84ff%22%20stop-opacity=%22.75%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%230a84ff%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3CradialGradient%20id=%22g5%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%22.28%22%20stop-color=%22%23fff%22%20stop-opacity=%22.95%22/%3E%3Cstop%20offset=%22.55%22%20stop-color=%22%23bf5af2%22%20stop-opacity=%22.75%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23bf5af2%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3CradialGradient%20id=%22g6%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%23fff%22/%3E%3Cstop%20offset=%22.28%22%20stop-color=%22%23fff%22%20stop-opacity=%22.95%22/%3E%3Cstop%20offset=%22.55%22%20stop-color=%22%2364d2ff%22%20stop-opacity=%22.75%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%2364d2ff%22%20stop-opacity=%220%22/%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle%20class=%22d%22%20r=%227%22%20fill=%22url(%23w)%22/%3E%3Ccircle%20class=%22d%20d2%22%20r=%227%22%20fill=%22url(%23w)%22/%3E%3Cg%20transform=%22translate(12%2012.4)%20scale(.8)%22%20stroke=%22%23fff%22%20stroke-linejoin=%22round%22%3E%3Cpath%20class=%22r%22%20d=%22M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z%22%20fill=%22none%22%20stroke-width=%222.5%22/%3E%3Cg%20class=%22gl%22%20fill=%22none%22%3E%3Cpath%20d=%22M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z%22%20stroke-width=%2213%22%20stroke-opacity=%22.12%22/%3E%3Cpath%20d=%22M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z%22%20stroke-width=%228.5%22%20stroke-opacity=%22.22%22/%3E%3C/g%3E%3Cpath%20d=%22M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z%22%20fill=%22url(%23f)%22%20stroke-width=%224.5%22/%3E%3Cpath%20d=%22M66%2046C74%2046%2080%2052%2081%2060%22%20fill=%22none%22%20stroke-opacity=%22.6%22%20stroke-width=%222.5%22%20stroke-linecap=%22round%22/%3E%3C/g%3E%3Cg%20class=%22p%20p1%22%3E%3Ccircle%20r=%2210%22%20fill=%22url(%23g1)%22/%3E%3Ccircle%20r=%223.6%22%20fill=%22%23fff%22/%3E%3C/g%3E%3Ccircle%20class=%22s%20s0%22%20style=%22animation-duration:4.1s;animation-delay:-0.3s%22%20cx=%2296.1%22%20cy=%2252.5%22%20r=%225%22%20fill=%22url(%23g1)%22/%3E%3Ccircle%20class=%22s%20s1%22%20style=%22animation-duration:4.1s;animation-delay:-0.3s%22%20cx=%22107.5%22%20cy=%2243.1%22%20r=%225%22%20fill=%22url(%23g1)%22/%3E%3Cg%20class=%22p%20p2%22%3E%3Ccircle%20r=%2210%22%20fill=%22url(%23g2)%22/%3E%3Ccircle%20r=%223.6%22%20fill=%22%23fff%22/%3E%3C/g%3E%3Ccircle%20class=%22s%20s0%22%20style=%22animation-duration:5.3s;animation-delay:-1.9s%22%20cx=%2287.3%22%20cy=%2292.9%22%20r=%225%22%20fill=%22url(%23g2)%22/%3E%3Ccircle%20class=%22s%20s1%22%20style=%22animation-duration:5.3s;animation-delay:-1.9s%22%20cx=%2299.6%22%20cy=%22101.5%22%20r=%225%22%20fill=%22url(%23g2)%22/%3E%3Cg%20class=%22p%20p3%22%3E%3Ccircle%20r=%2210%22%20fill=%22url(%23g3)%22/%3E%3Ccircle%20r=%223.6%22%20fill=%22%23fff%22/%3E%3C/g%3E%3Ccircle%20class=%22s%20s0%22%20style=%22animation-duration:4.7s;animation-delay:-3.2s%22%20cx=%2225.6%22%20cy=%2298.1%22%20r=%225%22%20fill=%22url(%23g3)%22/%3E%3Ccircle%20class=%22s%20s1%22%20style=%22animation-duration:4.7s;animation-delay:-3.2s%22%20cx=%2216.7%22%20cy=%22109.9%22%20r=%225%22%20fill=%22url(%23g3)%22/%3E%3Cg%20class=%22p%20p4%22%3E%3Ccircle%20r=%2210%22%20fill=%22url(%23g4)%22/%3E%3Ccircle%20r=%223.6%22%20fill=%22%23fff%22/%3E%3C/g%3E%3Ccircle%20class=%22s%20s0%22%20style=%22animation-duration:5.9s;animation-delay:-0.9s%22%20cx=%2226%22%20cy=%2259.8%22%20r=%225%22%20fill=%22url(%23g4)%22/%3E%3Ccircle%20class=%22s%20s1%22%20style=%22animation-duration:5.9s;animation-delay:-0.9s%22%20cx=%2214.3%22%20cy=%2249.5%22%20r=%225%22%20fill=%22url(%23g4)%22/%3E%3Cg%20class=%22p%20p5%22%3E%3Ccircle%20r=%2210%22%20fill=%22url(%23g5)%22/%3E%3Ccircle%20r=%223.6%22%20fill=%22%23fff%22/%3E%3C/g%3E%3Ccircle%20class=%22s%20s0%22%20style=%22animation-duration:4.4s;animation-delay:-2.6s%22%20cx=%2278.6%22%20cy=%2227%22%20r=%225%22%20fill=%22url(%23g5)%22/%3E%3Ccircle%20class=%22s%20s1%22%20style=%22animation-duration:4.4s;animation-delay:-2.6s%22%20cx=%2286.5%22%20cy=%2216%22%20r=%225%22%20fill=%22url(%23g5)%22/%3E%3Cg%20class=%22p%20p6%22%3E%3Ccircle%20r=%2210%22%20fill=%22url(%23g6)%22/%3E%3Ccircle%20r=%223.6%22%20fill=%22%23fff%22/%3E%3C/g%3E%3Ccircle%20class=%22s%20s0%22%20style=%22animation-duration:5.6s;animation-delay:-4.4s%22%20cx=%2233.5%22%20cy=%2234.3%22%20r=%225%22%20fill=%22url(%23g6)%22/%3E%3Ccircle%20class=%22s%20s1%22%20style=%22animation-duration:5.6s;animation-delay:-4.4s%22%20cx=%2218.1%22%20cy=%2228.4%22%20r=%225%22%20fill=%22url(%23g6)%22/%3E%3C/svg%3E",   // V5.1: Oran's app icon (shown in the top bar and menu)     // V5 (Oran, 2026-10-15): no tagline line in the top bar
   iconHtml: "<span class=\"ik-licon\"><b><i class=\"ld\"></i><i class=\"ld ld2\"></i><img class=\"lr\" alt=\"\" src=\"data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%20120'%3E%3Cg%20transform='translate(12%2012.4)%20scale(.8)'%20stroke='%23fff'%20stroke-linejoin='round'%3E%3Cpath%20d='M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z'%20fill='none'%20stroke-width='2.5'/%3E%3C/g%3E%3C/svg%3E\"><img class=\"lg\" alt=\"\" src=\"data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%20120'%3E%3Cg%20transform='translate(12%2012.4)%20scale(.8)'%20stroke='%23fff'%20stroke-linejoin='round'%3E%3Cg%20fill='none'%3E%3Cpath%20d='M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z'%20stroke-width='13'%20stroke-opacity='.12'/%3E%3Cpath%20d='M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z'%20stroke-width='8.5'%20stroke-opacity='.22'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\"><img alt=\"\" src=\"data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20120%20120'%3E%3Cdefs%3E%3CradialGradient%20id='f'%20cx='.6'%20cy='.55'%20r='.6'%3E%3Cstop%20offset='0'%20stop-color='%23fff6d6'/%3E%3Cstop%20offset='.5'%20stop-color='%23ffb36b'/%3E%3Cstop%20offset='1'%20stop-color='%23ff4f7a'/%3E%3C/radialGradient%3E%3C/defs%3E%3Cg%20transform='translate(12%2012.4)%20scale(.8)'%20stroke='%23fff'%20stroke-linejoin='round'%3E%3Cpath%20d='M52%2028L58%2028L58%2040C64%2036%2080%2036%2086%2048C92%2062%2084%2082%2068%2088C58%2092%2048%2090%2042%2084L36%2088L32%2082L38%2076C46%2080%2056%2078%2062%2072C68%2066%2066%2058%2060%2056C55%2054%2052%2050%2052%2044Z'%20fill='url(%23f)'%20stroke-width='4.5'/%3E%3Cpath%20d='M66%2046C74%2046%2080%2052%2081%2060'%20fill='none'%20stroke-opacity='.6'%20stroke-width='2.5'%20stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E\"><i class=\"lp1\"></i><i class=\"lc1 la\" style=\"left:91.1px;top:47.5px;animation-duration:4.1s;animation-delay:-0.3s\"></i><i class=\"lc1 lb\" style=\"left:102.5px;top:38.1px;animation-duration:4.1s;animation-delay:-0.3s\"></i><i class=\"lp2\"></i><i class=\"lc2 la\" style=\"left:82.3px;top:87.9px;animation-duration:5.3s;animation-delay:-1.9s\"></i><i class=\"lc2 lb\" style=\"left:94.6px;top:96.5px;animation-duration:5.3s;animation-delay:-1.9s\"></i><i class=\"lp3\"></i><i class=\"lc3 la\" style=\"left:20.6px;top:93.1px;animation-duration:4.7s;animation-delay:-3.2s\"></i><i class=\"lc3 lb\" style=\"left:11.7px;top:104.9px;animation-duration:4.7s;animation-delay:-3.2s\"></i><i class=\"lp4\"></i><i class=\"lc4 la\" style=\"left:21px;top:54.8px;animation-duration:5.9s;animation-delay:-0.9s\"></i><i class=\"lc4 lb\" style=\"left:9.3px;top:44.5px;animation-duration:5.9s;animation-delay:-0.9s\"></i><i class=\"lp5\"></i><i class=\"lc5 la\" style=\"left:73.6px;top:22px;animation-duration:4.4s;animation-delay:-2.6s\"></i><i class=\"lc5 lb\" style=\"left:81.5px;top:11px;animation-duration:4.4s;animation-delay:-2.6s\"></i><i class=\"lp6\"></i><i class=\"lc6 la\" style=\"left:28.5px;top:29.3px;animation-duration:5.6s;animation-delay:-4.4s\"></i><i class=\"lc6 lb\" style=\"left:13.1px;top:23.4px;animation-duration:5.6s;animation-delay:-4.4s\"></i></b></span>",   // 0.5.8n (performance pass): the same symbol as iconImg, as layers that animate without repainting (see .ik-licon)
