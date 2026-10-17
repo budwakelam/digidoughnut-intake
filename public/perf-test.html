@@ -1021,9 +1021,9 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 .ik-fm-vis svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .ik-fm-still{mix-blend-mode:screen}
 .ik-fm-flow{will-change:transform}
-.ik-fm-run path{fill:none;stroke-linecap:round;stroke-dasharray:12 100;animation:ikFmTravel 3.6s cubic-bezier(.45,.05,.55,.95) infinite}
-.ik-fm-run.trunk path{stroke-dasharray:20 100;animation-duration:3s}
-.ik-fm-run:nth-child(3n) path{animation-delay:-1.2s}.ik-fm-run:nth-child(3n+1) path{animation-delay:-2.4s}
+.ik-fm-run path{fill:none;stroke-linecap:round;stroke-dasharray:12 100;animation:ikFmTravel 7.2s cubic-bezier(.45,.05,.55,.95) infinite}   /* PERF v2: half speed */
+.ik-fm-run.trunk path{stroke-dasharray:20 100;animation-duration:6s}   /* PERF v2: half speed */
+.ik-fm-run:nth-child(3n) path{animation-delay:-2.4s}.ik-fm-run:nth-child(3n+1) path{animation-delay:-4.8s}   /* PERF v2: stagger scaled to the slower pace */
 .ik-fm-halos{position:absolute;inset:0}
 .ik-fm-ring{position:absolute;width:4.7%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:2px solid var(--c);box-shadow:0 0 10px var(--c);pointer-events:none}
 .ik-fm-halo{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,var(--c) 0%,color-mix(in srgb,var(--c) 45%,transparent) 35%,transparent 100%);
@@ -1135,7 +1135,7 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 .ik-fm-fat.store,.ik-fm-fat.burn{box-shadow:0 0 14px rgba(255,194,71,.32)}   /* PERF: static glow, was ikFmFatGlow */
 .ik-fm-fat.burn{border-color:rgba(124,242,199,.4)}
 
-.ik-fm-run.fat path{stroke-dasharray:22 100;animation-duration:4s}
+.ik-fm-run.fat path{stroke-dasharray:22 100;animation-duration:8s}   /* PERF v2: half speed */
 .ik-fm-paused .ik-fm-fat{animation-play-state:paused}
 .ik-fm-key{display:flex;justify-content:center;flex-wrap:wrap;gap:4px 12px;padding:8px 14px 0;font-size:11.5px;font-weight:600;color:#9fb4c4}
 .ik-fm-key b{color:#dbe6ee}
@@ -1189,7 +1189,7 @@ details.ik-more summary{cursor:pointer;font-weight:700;padding:6px 0;min-height:
 .ik-fm-dash{stroke-dasharray:3 13;animation:ikFmDash 1.6s linear infinite;opacity:.9}
 @keyframes ikFmDash{from{stroke-dashoffset:16}to{stroke-dashoffset:0}}
 .ik-fm-paused .ik-fm-orbs{display:none}
-/* PERF ALTERNATE: orbs ride CSS motion path instead of SMIL */
+/* PERF ALTERNATE v2: orbs ride CSS motion path */
 .ik-fm-orbm{offset-rotate:0deg;animation-name:ikFmOrbMove;animation-timing-function:cubic-bezier(.4,0,.6,1);animation-iteration-count:infinite}
 @keyframes ikFmOrbMove{from{offset-distance:0%}to{offset-distance:100%}}
 .ik-fm-paused .ik-fm-orbm{animation-play-state:paused}
@@ -9832,7 +9832,6 @@ function ikRenderToday(ctx) {
   h += ikFuelMap(d, t, ikDaySeries(d, ikDaysBack(day, 7)), day, es);   // V5.5: the fuel map, top and centre
   var pre = "";   // 0.5.7: these cards now come after the food list
   if (ikShow(d, "meds")) pre += ikDoseCard(d, day, "med");   // V5: medications next
-  if (ikShow(d, "supps")) pre += ikRegItems(d).length ? ikDoseCard(d, day, "supp") : ikRegSetupCard();   // 0.5.8 (Oran, 2026-10-17): vitamins & supplements sit right under medications, above the food list
   if (!ikProfileReady(p)) {
     pre += '<div class="ik-card ik-setup"><b>Make the targets yours</b><p class="ik-small" style="margin:4px 0 10px">Right now your targets are Canada\'s Daily Values. Add your age, height, weight and how active you are for amounts made for you. About a minute.</p>' +
       '<button class="ik-btn" data-act="profile">Set my targets</button></div>';
@@ -9886,9 +9885,9 @@ function ikRenderToday(ctx) {
         (e.note ? '<br><span class="ik-enote">' + ikEsc(e.note) + "</span>" : "") + ikEntryBadges(e, d) + '</span>' + (ikEntryBars(e, et, d) || '<span class="ik-ekcal">' + right + "</span>") + "</button>";
     });
   });
+  if (ikShow(d, "supps")) h += ikRegItems(d).length ? ikDoseCard(d, day, "supp") : ikRegSetupCard();   // 0.5.8 (Oran, 2026-10-17): vitamins & supplements sit above the Food section
   h += '<div class="ik-foodhead"><h2 class="ik-h2">Food</h2><span class="ik-fm-addgrp">' + ikGlassBtn("sm") + '<button class="ik-btn" data-act="add">＋ Add food</button></span></div>';
   h += '<section class="ik-list">' + (listHtml || '<div class="ik-empty">Nothing logged ' + (isToday ? "yet today" : "on this day") + '.<br>Tap the camera to snap your food, or ＋ Add food.</div>') + "</section>";
-  h += '<div class="ik-quick"><button class="ik-btn" data-act="photo">📷 Snap my food</button><button class="ik-btn ghost" data-act="add">＋ Add food</button></div>';
   if (es.length) h += '<p class="ik-small ik-footnote">Each bar is how much of your day\'s target that meal gave you.</p>';   // 0.5.8: reminders go small, at the bottom
   // 0.5.7: food first (right under the fuel map), then the other cards; hydration is a folded section near the bottom
   var hyd = "";   // 0.5.8: hydration lives in the fuel map now (tap the Hydration light): a 8-hour chart, the day so far and cup sizes
@@ -10623,7 +10622,7 @@ function ikFuelMap(d, t, week, day, es) {
       '<path d="' + trunk + '" stroke="#fff" stroke-width="2.5" opacity=".55" fill="none" stroke-linecap="round" filter="url(#fmSoft)"/>' +
       '<path d="' + stomach + '" stroke="#ff3d7f" stroke-width="12" opacity="' + (absorbing ? 0.55 : 0.15) + '" filter="url(#fmBlur)" fill="none" stroke-linecap="round"/>' +
       '<path d="' + stomach + '" stroke="#ffc2d8" stroke-width="3" opacity="' + (absorbing ? 0.95 : 0.3) + '" fill="none" stroke-linecap="round" filter="url(#fmSoft)"/>';
-    var grads = {}, orb = function (path, c, r, dur, n) {   // PERF ALTERNATE: CSS motion path (offset-path) instead of SMIL animateMotion — far cheaper on mobile GPUs
+    var grads = {}, orb = function (path, c, r, dur, n) {   // PERF ALTERNATE v2: CSS motion path instead of SMIL — far cheaper on mobile GPUs
       var id = "fmOrb" + c.replace(/[^0-9a-z]/gi, ""); grads[id] = c; var o = "";
       for (var oi = 0; oi < n; oi++) o += '<circle class="ik-fm-orbm" r="' + r + '" fill="url(#' + id + ')" style="offset-path:path(\'' + path + '\');animation-duration:' + dur + 's;animation-delay:-' + (dur * oi / n).toFixed(2) + 's"/>';
       return o;
@@ -10633,15 +10632,15 @@ function ikFuelMap(d, t, week, day, es) {
       '<filter id="fmPulseM" filterUnits="userSpaceOnUse" x="330" y="300" width="180" height="580"><feGaussianBlur stdDeviation="6"/></filter>' +
       '<filter id="fmSysW" filterUnits="userSpaceOnUse" x="190" y="20" width="380" height="640"><feGaussianBlur stdDeviation="10"/></filter>' +
       '<filter id="fmSysM" filterUnits="userSpaceOnUse" x="190" y="20" width="380" height="640"><feGaussianBlur stdDeviation="3.5"/></filter></defs>' +
-      /* PERF ALTERNATE: the blurred glow is drawn once (static); only thin unfiltered dashes animate */ +
-      '<g opacity=".9" fill="none" stroke-linecap="round"><path d="' + trunk + '" stroke="' + trunkC + '" stroke-width="58" opacity=".32" filter="url(#fmPulseW)"/>' +
-      '<path d="' + trunk + '" stroke="#ffe6f0" stroke-width="18" opacity=".42" filter="url(#fmPulseM)"/></g>' +
-      '<g class="ik-fm-run trunk"><path pathLength="100" d="' + trunk + '" stroke="' + trunkC + '" stroke-width="12" opacity=".9"/>' +
+      /* PERF v2: blurred glow drawn once (static, stronger than v1); slow thin dashes animate on top */ +
+      '<g opacity=".9" fill="none" stroke-linecap="round"><path d="' + trunk + '" stroke="' + trunkC + '" stroke-width="58" opacity=".45" filter="url(#fmPulseW)"/>' +
+      '<path d="' + trunk + '" stroke="#ffe6f0" stroke-width="18" opacity=".58" filter="url(#fmPulseM)"/></g>' +
+      '<g class="ik-fm-run trunk"><path pathLength="100" d="' + trunk + '" stroke="' + trunkC + '" stroke-width="10" opacity=".85"/>' +
       '<path pathLength="100" d="' + trunk + '" stroke="#fff" stroke-width="3" opacity=".5"/></g>';
-    var orbs = F.past || F.none ? "" : orb(trunk, trunkC, eating ? 15 : 11, eating ? 3.4 : 4.8, eating ? 3 : 2);
+    var orbs = F.past || F.none ? "" : orb(trunk, trunkC, eating ? 15 : 11, eating ? 6.8 : 9.6, eating ? 3 : 2)   // PERF v2: orbs half speed;
     var halo = function (x, y, r, c, cls) { return '<i class="ik-fm-halo' + (cls || "") + '" style="left:' + (x / 7.3).toFixed(2) + "%;top:" + (y / 9.3).toFixed(2) + "%;width:" + (r * 2 / 7.3).toFixed(2) + "%;--c:" + c + '"></i>'; };
     halos += halo(374, 334, absorbing ? 46 : 30, "#ff3d7f", absorbing ? "" : " dim");
-    var sysW = "", sysM = "", sysC = "", sysWS = "", sysMS = "", sysN = 0;   // PERF ALTERNATE: sysWS/sysMS are static blurred copies
+    var sysW = "", sysM = "", sysC = "", sysWS = "", sysMS = "", sysN = 0;   // PERF v2: sysWS/sysMS are static blurred copies
     sys.forEach(function (S) {
       var st = S.st, s = S.s, on = U.open && U.pick === s.id, fu = ikFmSysFuel(s.id, F), c = F.past ? "#5d7387" : fu.c;
       var nc = st === "thrive" ? "#6fe7ff" : st === "steady" ? "#3f8cff" : "#5d7387";
@@ -10653,16 +10652,16 @@ function ikFuelMap(d, t, week, day, es) {
         "";
       if (on) ring = '<i class="ik-fm-ring" style="left:' + (s.x / 7.3).toFixed(2) + "%;top:" + (s.y / 9.3).toFixed(2) + "%;--c:" + IK_FM_COL[st] + '"></i>';
       if (!F.past) {   // 0.5.8b: soft, blurred pulses like the main stream (one blur per layer, not per path)
-        var dl = ' style="animation-delay:-' + ((sysN++ * 1.2) % 3.6).toFixed(1) + 's"';
-        sysWS += '<path d="' + s.d + '" stroke="' + c + '" stroke-width="30" opacity=".32" fill="none" stroke-linecap="round"/>';   // PERF: static blur, drawn once
+        var dl = ' style="animation-delay:-' + ((sysN++ * 2.4) % 7.2).toFixed(1) + 's"';   // PERF v2: stagger scaled to the slower pace
+        sysWS += '<path d="' + s.d + '" stroke="' + c + '" stroke-width="30" opacity=".45" fill="none" stroke-linecap="round"/>';   // PERF v2: static blur, drawn once
         sysW += '<g class="ik-fm-run"><path pathLength="100" d="' + s.d + '" stroke="' + c + '" stroke-width="8" opacity=".85"' + dl + "/></g>";
-        sysMS += '<path d="' + s.d + '" stroke="#ffeef6" stroke-width="9" opacity=".42" fill="none" stroke-linecap="round"/>';   // PERF: static blur, drawn once
+        sysMS += '<path d="' + s.d + '" stroke="#ffeef6" stroke-width="9" opacity=".58" fill="none" stroke-linecap="round"/>';   // PERF v2: static blur, drawn once
         sysM += '<g class="ik-fm-run"><path pathLength="100" d="' + s.d + '" stroke="#ffeef6" stroke-width="4" opacity=".8"' + dl + "/></g>";
         sysC += '<g class="ik-fm-run"><path pathLength="100" d="' + s.d + '" stroke="#fff" stroke-width="1.6" opacity=".45"' + dl + "/></g>";
       }
       if (S.boost) {   // 0.5.8: this system is getting something from the meal you just had
         sysM += '<path class="ik-fm-dash" d="' + s.d + '" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round"/>';
-        orbs += orb(s.d, c, 10, 3.2, 1);
+        orbs += orb(s.d, c, 10, 6.4, 1)   // PERF v2: orbs half speed;
       }
       halos += halo(s.x, s.y, st === "thrive" ? 40 : st === "steady" ? 31 : 22, nc, st === "low" ? " dim" : "");
     });
@@ -10675,10 +10674,10 @@ function ikFuelMap(d, t, week, day, es) {
       var fpath = FAT.mode === "burn" ? "M236 690 C320 690 400 698 441 698" : "M441 698 C400 698 320 690 236 690";
       if (FAT.mode !== "hold") {
         flow += '<defs><filter id="fmFatW" filterUnits="userSpaceOnUse" x="190" y="620" width="300" height="150"><feGaussianBlur stdDeviation="9"/></filter></defs>' +
-          '<g opacity=".9" fill="none" stroke-linecap="round"><path d="' + fpath + '" stroke="#ffc247" stroke-width="26" opacity=".38" filter="url(#fmFatW)"/></g>' +   // PERF: static blur
+          '<g opacity=".9" fill="none" stroke-linecap="round"><path d="' + fpath + '" stroke="#ffc247" stroke-width="26" opacity=".5" filter="url(#fmFatW)"/></g>' +   // PERF v2: static blur
           '<g class="ik-fm-run fat"><path pathLength="100" d="' + fpath + '" stroke="#ffc247" stroke-width="8" opacity=".85"/>' +
           '<path pathLength="100" d="' + fpath + '" stroke="#fff3d1" stroke-width="3" opacity=".6"/></g>';
-        orbs += orb(fpath, "#ffc247", FAT.g >= 6 ? 12 : 9, 4, FAT.g >= 6 ? 2 : 1);
+        orbs += orb(fpath, "#ffc247", FAT.g >= 6 ? 12 : 9, 8, FAT.g >= 6 ? 2 : 1)   // PERF v2: orbs half speed;
       }
       still += '<path d="M441 698 C400 698 320 690 236 690" stroke="#ffc247" stroke-width="' + (FAT.mode === "hold" ? 2 : 3) + '" opacity="' + (FAT.mode === "hold" ? 0.25 : 0.5) + '" fill="none" stroke-linecap="round" stroke-dasharray="' + (FAT.mode === "hold" ? "3 6" : "none") + '"/>';
     }
@@ -10690,7 +10689,7 @@ function ikFuelMap(d, t, week, day, es) {
       '<div class="ik-fm-halos" aria-hidden="true">' + halos + "</div>" +
       '<svg class="ik-fm-flow" viewBox="0 0 730 930" aria-hidden="true"><defs>' + Object.keys(grads).map(function (id) {
         return '<radialGradient id="' + id + '"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="' + grads[id] + '"/><stop offset="1" stop-color="' + grads[id] + '" stop-opacity="0"/></radialGradient>'; }).join("") +
-        "</defs>" + flow + '<g filter="url(#fmSysW)">' + sysWS + '</g><g filter="url(#fmSysM)">' + sysMS + "</g>" + sysW + sysM + sysC + '<g class="ik-fm-orbs">' + orbs + "</g></svg>";   // PERF: blurred copies static, dashes unfiltered
+        "</defs>" + flow + '<g filter="url(#fmSysW)">' + sysWS + '</g><g filter="url(#fmSysM)">' + sysMS + "</g>" + sysW + sysM + sysC + '<g class="ik-fm-orbs">' + orbs + "</g></svg>";   // PERF v2: blurred copies static, dashes unfiltered
     var sig = 0; for (var si = 0; si < vis.length; si += 7) sig = (sig * 31 + vis.charCodeAt(si)) | 0;
     h += '<div class="ik-fm-card"><div class="ik-fm-stage" data-fm="bg"><div class="ik-fm-vis" data-sig="' + sig + '">' + vis + "</div>" + ring;
     sys.forEach(function (S) {
@@ -10731,9 +10730,9 @@ function ikFuelMap(d, t, week, day, es) {
       (LV ? '<span><b class="g">▲+N</b>still filling (last 2 h)</span>' : "") +
       '<span class="w">' + (N.live ? "% = last " + (N.days ? N.days + " days + " : "") + "24 h as absorbed" : N.days ? "% = average day, last " + N.days + " days" : "% = today so far") +
       ' · estimates, not medical advice · <button class="ik-fm-link" data-fm="sources">How it works</button></span></div>';
-    h += '<div class="ik-fm-foot">';   // 0.5.7: a neutral light panel, so the colours never fight the person's theme
-    if (!set.fmAck) h += '<div class="ik-fm-legal first"><span>The fuel map is an estimate built from published nutrition research, not medical advice or a test.</span><button class="ik-fm-ok" data-fm="ack">Got it</button></div>';
-    h += "</div></div>";   // foot, card
+    // 0.5.8 (Oran, 2026-10-17): no empty foot — it showed as a white strip once the legal notice was acknowledged
+    if (!set.fmAck) h += '<div class="ik-fm-foot"><div class="ik-fm-legal first"><span>The fuel map is an estimate built from published nutrition research, not medical advice or a test.</span><button class="ik-fm-ok" data-fm="ack">Got it</button></div></div>';
+    h += "</div>";   // card
   }
   h += '</div><div class="ik-fm-right">';
   // the panel: folded away on phones until something is tapped; always shown beside the map on computers
