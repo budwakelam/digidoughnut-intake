@@ -495,6 +495,7 @@ body{margin:0;font-family:var(--dd-font);background:var(--dd-bg);color:var(--dd-
 .dd-helper-turnon{width:100%}
 .dd-helper-chips{display:flex;flex-wrap:wrap;gap:6px}
 .dd-helper-chip{background:#fff;border:1px solid var(--dd-brand-soft-d);color:var(--dd-brand);border-radius:99px;padding:6px 12px;font:inherit;font-size:.85rem;cursor:pointer;min-height:36px}
+@media (max-width:899px){.dd-helper-chips .dd-helper-chip:nth-child(n+3){display:none}} /* 0.5.9_4 (Oran): 4 prompt chips bury the text box on phones — show 2 */
 .dd-helper-row{display:flex;gap:8px;align-items:flex-end}
 .dd-helper-inwrap{flex:1;min-width:0;display:flex;align-items:flex-end;gap:2px;background:#fff;border:2px solid var(--dd-line);border-radius:22px;padding:3px}
 .dd-helper-inwrap:focus-within{border-color:var(--dd-brand)}
@@ -10330,7 +10331,7 @@ function ikRenderToday(ctx) {
       if (e.kind === "drink" && (et.v.kcal || 0) < 5) right = ikNum(et.drinksMl, 0) + "<span> mL</span>";   // V5.1: water and black coffee show how much
       listHtml += '<button class="ik-entry' + '" data-entry="' + ikEsc(e.id) + '"><span class="ik-ico ' + icon + '" aria-hidden="true">' + (IK_PART_ICON[icon] || "🍽️") + "</span>" +
         '<span class="ik-grow"><span class="ik-ewhen">' + IK_PARTS[e.part] + " · " + ikNiceTime(e.time) + '</span><br><span class="ik-ename">' + ikEsc(ikEntryName(e, d)) + "</span>" + (et.est ? '<span class="ik-est">estimated</span>' : "") +
-        (e.note ? '<br><span class="ik-enote">' + ikEsc(e.note) + "</span>" : "") + ikEntryBadges(e, d) + (IK_FM_LIVE && IK_FM_LIVE.day === day && IK_FM_LIVE.fresh[e.id] && IK_FM_LIVE.any ? ikFuelingBadge() : "") + '</span>'   <!-- 0.5.8w (Oran): beside Balance, clear of the bars -->+ (ikEntryBars(e, et, d) || '<span class="ik-ekcal">' + right + "</span>") + "</button>";
+        (e.note ? '<br><span class="ik-enote">' + ikEsc(e.note) + "</span>" : "") + ikEntryBadges(e, d) + (IK_FM_LIVE && IK_FM_LIVE.day === day && IK_FM_LIVE.fresh[e.id] && IK_FM_LIVE.any ? ikFuelingBadge() : "") + '</span>' /* 0.5.8w (Oran): beside Balance, clear of the bars */ + (ikEntryBars(e, et, d) || '<span class="ik-ekcal">' + right + "</span>") + "</button>";
     });
   });
   if (ikShow(d, "supps")) h += ikRegItems(d).length ? ikDoseCard(d, day, "supp") : ikRegSetupCard();   // 0.5.8 (Oran, 2026-10-17): vitamins & supplements sit above the Food section
